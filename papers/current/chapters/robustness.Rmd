@@ -1,0 +1,202 @@
+<!-- Robustness -->
+
+```{r simulation-data}
+# set.seed(123)
+I <- 30 #num of ppl
+J <- 2 #conditions
+K <- 100 #trials per person per condition
+N <- I * J * K
+
+sub <- rep(1:I, each = J * K)
+cond <- rep(0:(J-1), I, each = K)
+
+sim <- 50
+keep <- 501:5000
+```
+
+```{r rho0, cache = T}
+t.sigma <- .2
+t.rho <- 0
+
+#Setup arrays
+effects <- matrix(ncol = sim, nrow = I)
+mixResults <- list()
+
+for(i in 1:sim){
+t.z <- rbinom(I, 1, t.rho)
+t.alpha <- rlnorm(I, log(.5), .5)
+t.theta <- t.z * rlnorm(I, log(.02), .3)
+
+y <- rnorm(N, t.alpha[sub], t.sigma) + cond * rexp(N, 1/t.theta[sub])
+
+# plot(y)
+means <- tapply(y, list(sub, cond), mean)
+effects[, i] <- means[, 2] - means[, 1]
+# sum(effects < 0)
+# plot(seq(0, .5, .001), dlnorm(seq(0, .5, .001), log(.02), .7), type = "l")
+
+mixResults[[i]] <- ez.mix(y, sub, cond, c(1, 1/10, 1/6), keep)
+}
+```
+
+```{r}
+###Observed
+# matplot(apply(effects, 2, sort), type = "l", lty = 1, ylab = "Simulated effects")
+# abline(h = 0, col = "gray", lty = 2)
+effects.t0 <- effects
+
+bfpss.t0 <- 1:sim
+bf0ss.t0 <- 1:sim
+###BFs
+for(i in 1:sim){
+  bfpss.t0[i] <- mixResults[[i]]$bfpss
+  bf0ss.t0[i] <- mixResults[[i]]$bf0s
+}
+# plot(bf0ss, col = "blue", ylim = c(0, max(bf0ss, bfpss)), type = "l")
+# lines(bfpss, col = "red")
+# abline(h = 1)
+```
+
+```{r rho1, cache = T}
+t.sigma <- .2
+t.rho <- 1
+
+#Setup arrays
+effects <- matrix(ncol = sim, nrow = I)
+mixResults <- list()
+
+for(i in 1:sim){
+t.z <- rbinom(I, 1, t.rho)
+t.alpha <- rlnorm(I, log(.5), .5)
+t.theta <- t.z * rlnorm(I, log(.02), .3)
+
+y <- rnorm(N, t.alpha[sub], t.sigma) + cond * rexp(N, 1/t.theta[sub])
+
+# plot(y)
+means <- tapply(y, list(sub, cond), mean)
+effects[, i] <- means[, 2] - means[, 1]
+# sum(effects < 0)
+# plot(seq(0, .5, .001), dlnorm(seq(0, .5, .001), log(.02), .7), type = "l")
+
+mixResults[[i]] <- ez.mix(y, sub, cond, c(1, 1/10, 1/6), keep)
+}
+```
+
+```{r}
+###Observed
+# matplot(apply(effects, 2, sort), type = "l", lty = 1, ylab = "Simulated effects")
+# abline(h = 0, col = "gray", lty = 2)
+effects.t1 <- effects
+
+bfpss.t1 <- 1:sim
+bf0ss.t1 <- 1:sim
+###BFs
+for(i in 1:sim){
+  bfpss.t1[i] <- mixResults[[i]]$bfpss
+  bf0ss.t1[i] <- mixResults[[i]]$bf0s
+}
+# plot(bf0ss, col = "blue", ylim = c(0, max(bf0ss, bfpss)), type = "l")
+# lines(bfpss, col = "red")
+# abline(h = 1)
+```
+
+```{r rho-5, cache = T}
+t.sigma <- .2
+t.rho <- .5
+
+#Setup arrays
+effects <- matrix(ncol = sim, nrow = I)
+mixResults <- list()
+
+for(i in 1:sim){
+t.z <- rbinom(I, 1, t.rho)
+t.alpha <- rlnorm(I, log(.5), .5)
+t.theta <- t.z * rlnorm(I, log(.02), .3)
+
+y <- rnorm(N, t.alpha[sub], t.sigma) + cond * rexp(N, 1/t.theta[sub])
+
+# plot(y)
+means <- tapply(y, list(sub, cond), mean)
+effects[, i] <- means[, 2] - means[, 1]
+# sum(effects < 0)
+# plot(seq(0, .5, .001), dlnorm(seq(0, .5, .001), log(.02), .7), type = "l")
+
+mixResults[[i]] <- ez.mix(y, sub, cond, c(1, 1/10, 1/6), keep)
+}
+```
+
+```{r}
+###Observed
+# matplot(apply(effects, 2, sort), type = "l", lty = 1, ylab = "Simulated effects")
+# abline(h = 0, col = "gray", lty = 2)
+effects.t.5 <- effects
+
+bfpss.t.5 <- 1:sim
+bf0ss.t.5 <- 1:sim
+###BFs
+for(i in 1:sim){
+  bfpss.t.5[i] <- mixResults[[i]]$bfpss
+  bf0ss.t.5[i] <- mixResults[[i]]$bf0s
+}
+# plot(bf0ss, col = "blue", ylim = c(0, max(bf0ss, bfpss)), type = "l")
+# lines(bfpss, col = "red")
+# abline(h = 1)
+```
+
+```{r fig-sim, fig.cap = "Simulation on robustness of spike-and-slab model", fig.width=8, fig.height=4}
+layout(matrix(1:2, nrow = 1))
+par(mgp = c(2,1,0))
+matplot(apply(effects.t0, 2, sort)
+        , type = "l", lty = 1
+        , ylab = "Simulated Effects", col = adjustcolor("orangered2", alpha.f = .5)
+        , ylim = c(min(effects.t0, effects.t.5, effects.t1)
+                   , max(effects.t0, effects.t.5, effects.t1))
+        , main = "A."
+        , frame.plot = F
+        , xaxt = 'n')
+axis(1, c(1, I))
+matplot(apply(effects.t.5, 2, sort)
+        , type = "l", lty = 1
+        , col = adjustcolor("olivedrab4", alpha.f = .5)
+        , add = T)
+matplot(apply(effects.t1, 2, sort)
+        , type = "l", lty = 1
+        , col = adjustcolor("cornflowerblue", alpha.f = .5)
+        , add = T)
+abline(h = 0, lty = 2, col = "gray")
+
+all.bf.sim <- data.frame(
+  bfs = log(c(bf0ss.t0, bfpss.t0, bf0ss.t.5, bfpss.t.5, bf0ss.t1, bfpss.t1))
+  , type = factor(rep(c("OSS", "PSS"), each = sim, 3))
+  , truth = factor(rep(c("T0", "T.5", "T1"), each = sim * 2))
+)
+levels(all.bf.sim$type) <- c("BF_0SS", "BF_+SS")
+levels(all.bf.sim$truth) <- c("True spike", "True slab", "True mixture")
+all.bf.sim[all.bf.sim$bfs == -Inf, 1] <- -10
+
+beeswarm(bfs ~ type * truth
+         , data = all.bf.sim
+         , corral = "wrap"
+         , corralWidth = .7
+         , axes = F
+         , ylab = "Bayes Factors"
+         , xlab = ""
+         , ylim = c(-10, 7)
+         , col = adjustcolor(c("indianred", "slateblue3"), alpha = .7)
+         , pch = 20
+         , main = "B."
+         )
+axis(1, c(1.5, 3.5, 5.5)
+     , labels = rep(" ", 3), las = 2)
+text(c(1.3, 3.3, 5.3), -12
+     , labels = c("True Spike", "True Slab", "True Mix")
+     , xpd = T, pos = 4, srt = -40, offset = -.05)
+axis(2, seq(-10, 5, 5), c(round(exp(seq(-10, 0, 5)), 2), 150))
+abline(h = 0, lty = 2, col = "gray")
+legend("topright"
+       , legend = c(expression(BF["0SS"]), expression(BF["+SS"]))
+       , pch = 20
+       , col = c("indianred", "slateblue3")
+       , bty = "n")
+```
+

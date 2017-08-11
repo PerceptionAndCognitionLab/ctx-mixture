@@ -1,0 +1,817 @@
+
+```{r datasubprim}
+datclean$condn <- 1 - datclean$cond
+
+I <- length(unique(datclean$sub))
+J <- length(unique(datclean$cond))
+K <- tapply(datclean$rt, list(datclean$sub, datclean$condn), length)
+N <- sum(K)
+
+sub <- as.factor(datclean$sub)
+levels(sub) <- 1:I
+
+cond <- datclean$condn
+sub <- as.numeric(sub)
+y <- datclean$rt
+
+ybar <- tapply(y, list(sub, cond), mean)
+effect <- ybar[, 2] - ybar[, 1]
+# plot(1:I, sort(effect), pch = 19, ylab = expression(hat(theta)), xlab = "Participants", col = "darkgray")
+# # thneg <- effect[effect < 0]
+# # points(1: length(thneg), sort(thneg), col = "red")
+# abline(h = 0)
+```
+
+```{r package-analysis, cache = T}
+##Running models for our data set
+M <- 40000
+keep <- 4001:M
+r.alpha <- 1
+r.mutheta <- .16
+r.theta <- .1
+
+cond.pack <- ifelse((datclean$cond) == 1, 1, 2)
+prep <- prep.models(sub, cond.pack)
+bf <- makeBF(y, r.mutheta, r.theta, prep = prep, keep = keep)
+pack.pm <- colMeans(bf$est.full)
+pack.theta <- bf$myTheta
+
+# plot(1:I
+#      , sort(effect)
+#      , pch = 19
+#      , ylab = expression(hat(theta))
+#      ,xlab = "Participants"
+#      , col = "darkgray"
+#      , main = "Estimates from the full model")
+# abline(h = 0)
+# points(colMeans(pack.theta)[order(effect)], pch = 19, col = "red")
+```
+
+```{r prep-chain, eval = chains}
+M <- 100000
+keep <- 5001:M
+keep.int <- 10
+
+mu.alpha <- 1:M
+alpha <- matrix(nrow = M, ncol = I)
+mu.theta <- 0:(M - 1)
+theta <- matrix(nrow = M, ncol = I)
+
+z <- matrix(nrow = M, ncol = I)
+rho <- 1:M
+
+s2 <- 1:M
+g.alpha <- 1:M
+g.theta <- 1:M
+g.mu.th <- 1:M
+
+rho.a <- 1
+rho.b <- 1
+r.alpha <- r.alpha
+r.theta <- r.theta
+r.mu.th <- r.mutheta
+
+alpha[1, ] <- ybar[, 1] - mean(ybar[, 1])
+theta[1, ] <- effect
+rho[1] <- rho.a/sum(rho.a, rho.b)
+z[1, ] <- ifelse(effect < 0, 0, 1)
+g.theta[1] <- r.theta
+g.mu.th[1] <- r.mu.th
+
+sub.i <- sub[cond ==1]
+
+sd.cand <- .015
+count.decor <- 0
+keep.div <- seq(2,min(keep), keep.int)[-1]
+```
+
+```{r chain, cache = T, eval = chains}
+for(m in 2:M){
+  slab <- as.logical(z[m-1, ])
+  
+  #mu.alpha
+  Y <- y - alpha[m-1, sub] - cond * (theta[m-1, ] * slab)[sub]
+  mu.alpha[m] <- rnorm(1, mean(Y), sqrt(s2[m-1] / N)) #flat prior
+  
+  #alpha
+  Y <- y - mu.alpha[m] - cond * (theta[m-1, ] * slab)[sub]
+  c <- tapply(Y, sub, sum) / s2[m-1]
+  v <- 1/(tapply(Y, sub, length) / s2[m-1] + 1/(g.alpha[m-1] * s2[m-1]))
+  alpha[m, ] <- rnorm(I, c * v, sqrt(v))
+  
+  #Decorrelating step for mu and alpha, see Morey et al., 2008
+  cand.add <- rnorm(1, 0, sd.cand)
+  u <- exp(-1/2 * 
+             sum((alpha[m,] + cand.add)^2 - alpha[m, ]^2)/
+             (g.alpha[m-1] * s2[m-1]))
+  if(rbinom(1, 1, min(u, 1)) == 1){
+    alpha[m, ] <- alpha[m,] + cand.add
+    mu.alpha[m] <- mu.alpha[m] - cand.add
+    count.decor <- count.decor + 1
+  }
+  if(m %in% keep.div){
+    acc.prob <- count.decor/keep.int
+    if(acc.prob > .5){
+      sd.cand <- sd.cand * 1.25
+    }
+    if(acc.prob < .25){
+      sd.cand <- sd.cand * .75
+    }
+    count.decor <- 0
+  }
+  
+  #theta
+  Y <- y - mu.alpha[m] - alpha[m, sub]
+  
+  c <- tapply(Y, list(sub, cond), sum)[, 2] / s2[m-1] + mu.theta[m-1] / (g.theta[m-1] * s2[m-1])
+  v <- 1/(tapply(Y, list(sub, cond), length)[, 2] / s2[m-1] + 1 / (g.theta[m-1] * s2[m-1]))
+  theta[m, slab] <- rnorm(sum(slab), c[slab] * v[slab], sqrt(v[slab]))
+  theta[m, !slab] <- rnorm(sum(!slab), mu.theta[m-1], sqrt(g.theta[m-1] * s2[m-1]))
+  
+  #s2
+  Error <- y - mu.alpha[m] - alpha[m, sub] - cond * (theta[m, ] * slab)[sub]
+  scale <- sum(Error^2)/2 + 
+    sum(alpha[m, ]^2)/(2*g.alpha[m-1]) + 
+    sum((theta[m, ] - mu.theta[m-1])^2)/(2*g.theta[m-1]) + 
+    mu.theta[m-1]^2/(2 * g.mu.th[m-1])
+  s2[m] <- rinvgamma(1, (N + I + I + 1)/2, scale)
+  
+  #z
+  dens.spike <- tapply(dnorm(Y[cond == 1], 0, sqrt(s2[m]), log = T)
+                           , sub[cond ==1], sum)
+  dens.slab <- tapply(dnorm(Y[cond == 1], theta[m, sub[cond ==1]], sqrt(s2[m]), log = T)
+                          , sub[cond ==1], sum)
+  prob <- 1/(1 + (1- rho[m-1]) / rho[m-1] * exp(dens.spike - dens.slab))
+  # prob[is.na(prob)] <- 0
+  z[m,] <- rbinom(I, 1, prob)
+  
+  #rho
+  rho[m] <- rbeta(1, rho.a + sum(z[m, ]), rho.b + sum(!z[m, ]))
+  
+  #mu.theta
+  c <- sum(theta[m,])/(g.theta[m-1] * s2[m-1])
+  v <- 1/(I/(g.theta[m-1] * s2[m-1]) + 1/(g.mu.th[m-1] * s2[m-1]))
+  mu.theta[m] <- rnorm(1, c * v, sqrt(v))
+  
+  #gs
+  gscale <- sum(alpha[m, ]^2) / (2*s2[m])
+  g.alpha[m] <- rinvgamma(1, .5 + I/2, gscale + r.alpha^2/2)
+  
+  gscale <- sum((theta[m, ] - mu.theta[m])^2) / (2*s2[m])
+  g.theta[m] <- rinvgamma(1, .5 + I/2, gscale + r.theta^2/2)
+  
+  gscale <- mu.theta[m]^2 / (2*s2[m])
+  g.mu.th[m] <- rinvgamma(1, 1, gscale + r.mu.th^2/2)
+  
+  # percents <- round(seq(1, M, length.out = 20))
+  # if(m %in% percents) print(paste0(which(percents == m) * 5, "%"))
+}
+```
+
+```{r chain-summary, eval = chains}
+# plot(mu.alpha[keep], type = 'l')
+
+Samp.full <- cbind(mu.alpha, alpha, mu.theta, z * theta - mu.theta, s2, g.alpha, g.mu.th, g.theta)
+pm.full <- colMeans(Samp.full[keep,])
+rho.full <- rho
+z.full <- z
+theta.full <- theta
+```
+
+```{r prior-comp, eval = chains, cache = T}
+Mprior <- 1000000
+
+#Prior all slab or all spike
+prior.rho <- rbeta(Mprior, rho.a, rho.b)
+prior.z <- rbinom(Mprior, I, prior.rho)
+prior.slab <- mean(prior.z == I)
+prior.spike <- mean(prior.z == 0)
+
+#Prior all slab and all positive
+p.g.mu <- rinvgamma(Mprior, .5, .5 * r.mu.th^2)
+p.mu <- rnorm(Mprior, 0, sqrt(p.g.mu))
+g <- rinvgamma(Mprior, .5, .5 * r.theta^2)
+count <- 1:Mprior
+p.theta <- matrix(ncol = I, nrow = Mprior)
+for (m in 1:Mprior) p.theta[m,] <- rnorm(I, p.mu[m], sqrt(g[m]))
+count <- rowSums(p.theta > 0) == I
+prior.pos.slab <- mean(prior.z == I & count)
+prior.pos <- mean(count)
+```
+
+```{r BF, eval = chains}
+all.pos <- rowSums(theta.full[keep,] > 0)
+all.slab <- mean(rowSums(z.full[keep,]) == I)
+all.spike <- mean(rowSums(z.full[keep,]) == 0)
+all.pos.slab <- mean(all.pos == I & rowSums(z.full[keep,]) == I)
+all.pos.ss <- mean(all.pos == I)
+
+#BF
+bf.spike <- all.spike / prior.spike
+bf.slab <- all.slab / prior.slab
+bf.pos.slab <- all.pos.slab / prior.pos.slab
+bf.pos.ss <- all.pos.ss/prior.pos
+
+# bf.spike / bf.slab
+# bf$bf.0f
+# 
+# bf.spike / bf.pos.slab
+# bf$bf.0f / bf$bf.pf
+```
+
+```{r lists-subprim, eval = chains}
+subprim.chainout <- list(
+  keep = keep
+  , sample = Samp.full
+  , theta = theta.full
+  , z = z.full
+  , rho = rho
+  , counter = count.decor
+)
+
+subprim.bfs <- list(
+  bf0s = bf.spike
+  , bffs = bf.slab
+  , bfps = bf.pos.slab
+  , bfpss = bf.pos.ss
+  , bfpf = bf$bf.pf
+  , bf1f = bf$bf.1f
+  , bf1pf = bf$bf.1pF
+  , bf0f = bf$bf.0f
+  , prior.prob.spike = prior.spike
+  , prior.prob.slab = prior.slab
+  , prior.prob.pos.slab = prior.pos.slab
+  , post.prob.spike = all.spike
+  , post.prob.slab = all.slab
+  , post.prob.pos.slab = all.pos.slab
+)
+
+save(subprim.chainout, file ="chainOut/subprimChainout")
+save(subprim.bfs, file ="chainOut/subprimBfs")
+```
+
+```{r fig1, echo = F, fig.height = 5, fig.width=9}
+```
+
+<!-- ##Stroop 1 -->
+
+```{r data2}
+I <- length(unique(dat.stroop.p1$sub))
+J <- length(unique(dat.stroop.p1$cond))
+K <- tapply(dat.stroop.p1$rt, list(dat.stroop.p1$sub, dat.stroop.p1$cond), length)
+N <- sum(K)
+
+sub <- as.factor(dat.stroop.p1$sub)
+levels(sub) <- 1:I
+
+cond <- 1 - dat.stroop.p1$cond
+sub <- as.numeric(sub)
+y <- dat.stroop.p1$rt
+
+
+means.2 <- tapply(dat.stroop.p1$rt, list(dat.stroop.p1$sub, cond), mean)
+effect.2 <- means.2[, 2] - means.2[, 1]
+# plot(1:I, sort(effect.2), pch = 19, ylab = expression(hat(theta)), xlab = "Participants", col = "darkgray")
+# # thneg <- effect[effect < 0]
+# # points(1: length(thneg), sort(thneg), col = "red")
+# abline(h = 0)
+```
+
+```{r package-analysis2, cache = T}
+##Running models for our data set
+M <- 40000
+keep <- 4001:M
+r.alpha <- 1
+r.mutheta <- .16
+r.theta <- .1
+
+
+cond.pack <- ifelse(dat.stroop.p1$cond == 1, 1, 2)
+prep <- prep.models(sub, cond.pack)
+bf.2 <- makeBF(y, r.mutheta, r.theta, prep = prep, keep = keep)
+pack.pm.2 <- colMeans(bf$est.full)
+pack.theta <- bf.2$myTheta
+
+# plot(1:I
+#      , sort(effect.2)
+#      , pch = 19
+#      , ylab = expression(hat(theta))
+#      ,xlab = "Participants"
+#      , col = "darkgray"
+#      , main = "Estimates from the full model")
+# abline(h = 0)
+# points(colMeans(pack.theta)[order(effect.2)], pch = 19, col = "red")
+```
+
+```{r prep-chain2, eval = chains}
+M <- 100000
+keep <- 5001:M
+keep.int <- 100
+sd.cand <- .015
+count.decor <- 0
+keep.div <- seq(2,min(keep), keep.int)[-1]
+
+mu.alpha <- 1:M
+alpha <- matrix(nrow = M, ncol = I)
+mu.theta <- 0:(M - 1)
+theta <- matrix(nrow = M, ncol = I)
+
+z <- matrix(nrow = M, ncol = I)
+rho <- 1:M
+
+s2 <- 1:M
+g.alpha <- 1:M
+g.theta <- 1:M
+g.mu.th <- 1:M
+
+rho.a <- 1
+rho.b <- 1
+r.alpha <- 1
+r.theta <- .1
+r.mu.th <- 1/6
+
+alpha[1, ] <- means.2[, 1] - mean(means.2[, 1])
+theta[1, ] <- effect.2
+rho[1] <- rho.a/sum(rho.a, rho.b)
+z[1, ] <- ifelse(effect.2 < 0, 0, 1)
+g.theta[1] <- r.theta
+g.mu.th[1] <- r.mu.th
+
+sub.i <- sub[cond ==1]
+```
+
+```{r chain2, cache = T, eval = chains}
+for(m in 2:M){
+  slab <- as.logical(z[m-1, ])
+  
+  #mu.alpha
+  Y <- y - alpha[m-1, sub] - cond * (theta[m-1, ] * slab)[sub]
+  mu.alpha[m] <- rnorm(1, mean(Y), sqrt(s2[m-1] / N)) #flat prior
+  
+  #alpha
+  Y <- y - mu.alpha[m] - cond * (theta[m-1, ] * slab)[sub]
+  c <- tapply(Y, sub, sum) / s2[m-1]
+  v <- 1/(tapply(Y, sub, length) / s2[m-1] + 1/(g.alpha[m-1] * s2[m-1]))
+  alpha[m, ] <- rnorm(I, c * v, sqrt(v))
+  
+  #Decorrelating step for mu and alpha, see Morey et al., 2008
+  cand.add <- rnorm(1, 0, sd.cand)
+  u <- exp(-1/2 * 
+             sum((alpha[m,] + cand.add)^2 - alpha[m, ]^2)/
+             (g.alpha[m-1] * s2[m-1]))
+  if(rbinom(1, 1, min(u, 1)) == 1){
+    alpha[m, ] <- alpha[m,] + cand.add
+    mu.alpha[m] <- mu.alpha[m] - cand.add
+    count.decor <- count.decor + 1
+  }
+  if(m %in% keep.div){
+    acc.prob <- count.decor/keep.int
+    if(acc.prob > .5){
+      sd.cand <- sd.cand * 1.25
+    }
+    if(acc.prob < .25){
+      sd.cand <- sd.cand * .75
+    }
+    count.decor <- 0
+  }
+  
+  #theta
+  Y <- y - mu.alpha[m] - alpha[m, sub]
+  
+  c <- tapply(Y, list(sub, cond), sum)[, 2] / s2[m-1] + mu.theta[m-1] / (g.theta[m-1] * s2[m-1])
+  v <- 1/(tapply(Y, list(sub, cond), length)[, 2] / s2[m-1] + 1 / (g.theta[m-1] * s2[m-1]))
+  theta[m, slab] <- rnorm(sum(slab), c[slab] * v[slab], sqrt(v[slab]))
+  theta[m, !slab] <- rnorm(sum(!slab), mu.theta[m-1], sqrt(g.theta[m-1] * s2[m-1]))
+  
+  #s2
+  Error <- y - mu.alpha[m] - alpha[m, sub] - cond * (theta[m, ] * slab)[sub]
+  scale <- sum(Error^2)/2 + 
+    sum(alpha[m, ]^2)/(2*g.alpha[m-1]) + 
+    sum((theta[m, ] - mu.theta[m-1])^2)/(2*g.theta[m-1]) + 
+    mu.theta[m-1]^2/(2 * g.mu.th[m-1])
+  s2[m] <- rinvgamma(1, (N + I + I + 1)/2, scale)
+  
+  #z
+  dens.spike <- tapply(dnorm(Y[cond == 1], 0, sqrt(s2[m]), log = T)
+                           , sub[cond ==1], sum)
+  dens.slab <- tapply(dnorm(Y[cond == 1], theta[m, sub[cond ==1]], sqrt(s2[m]), log = T)
+                          , sub[cond ==1], sum)
+  prob <- 1/(1 + (1- rho[m-1]) / rho[m-1] * exp(dens.spike - dens.slab))
+  # prob[is.na(prob)] <- 0
+  z[m,] <- rbinom(I, 1, prob)
+  
+  #rho
+  rho[m] <- rbeta(1, rho.a + sum(z[m, ]), rho.b + sum(!z[m, ]))
+  
+  #mu.theta
+  c <- sum(theta[m,])/(g.theta[m-1] * s2[m-1])
+  v <- 1/(I/(g.theta[m-1] * s2[m-1]) + 1/(g.mu.th[m-1] * s2[m-1]))
+  mu.theta[m] <- rnorm(1, c * v, sqrt(v))
+  
+  #gs
+  gscale <- sum(alpha[m, ]^2) / (2*s2[m])
+  g.alpha[m] <- rinvgamma(1, .5 + I/2, gscale + r.alpha^2/2)
+  
+  gscale <- sum((theta[m, ] - mu.theta[m])^2) / (2*s2[m])
+  g.theta[m] <- rinvgamma(1, .5 + I/2, gscale + r.theta^2/2)
+  
+  gscale <- mu.theta[m]^2 / (2*s2[m])
+  g.mu.th[m] <- rinvgamma(1, 1, gscale + r.mu.th^2/2)
+  
+  # percents <- round(seq(1, M, length.out = 20))
+  # if(m %in% percents) print(paste0(which(percents == m) * 5, "%"))
+}
+```
+
+```{r chain-summary2, eval = chains}
+# plot(mu.alpha[keep], type = 'l')
+
+Samp.full <- cbind(mu.alpha, alpha, mu.theta, z * theta - mu.theta, s2, g.alpha, g.mu.th, g.theta)
+pm.full <- colMeans(Samp.full[keep,])
+rho.full <- rho
+z.full <- z
+theta.full <- theta
+```
+
+```{r prior-comp2, eval = chains, cache = T}
+Mprior <- 1000000
+
+#Prior all slab or all spike
+prior.rho <- rbeta(Mprior, rho.a, rho.b)
+prior.z <- rbinom(Mprior, I, prior.rho)
+prior.slab <- mean(prior.z == I)
+prior.spike <- mean(prior.z == 0)
+
+#Prior all slab and all positive
+p.g.mu <- rinvgamma(Mprior, .5, .5 * r.mu.th^2)
+p.mu <- rnorm(Mprior, 0, sqrt(p.g.mu))
+g <- rinvgamma(Mprior, .5, .5 * r.theta^2)
+count <- 1:Mprior
+p.theta <- matrix(ncol = I, nrow = Mprior)
+for (m in 1:Mprior) p.theta[m,] <- rnorm(I, p.mu[m], sqrt(g[m]))
+count <- rowSums(p.theta > 0) == I
+prior.pos.slab <- mean(prior.z == I & count)
+prior.pos <- mean(count)
+```
+
+```{r BF2, eval = chains}
+all.pos <- rowSums(theta.full[keep,] > 0)
+all.slab <- mean(rowSums(z.full[keep,]) == I)
+all.spike <- mean(rowSums(z.full[keep,]) == 0)
+all.pos.slab <- mean(all.pos == I & rowSums(z.full[keep,]) == I)
+
+#BF
+bf.spike <- all.spike / prior.spike
+bf.slab <- all.slab / prior.slab
+bf.pos.slab <- all.pos.slab / prior.pos.slab
+bf.pos.ss <- mean(all.pos == I)/prior.pos
+
+# bf.spike / bf.slab
+# bf.2$bf.0f
+# 
+# bf.spike / bf.pos.slab
+# bf.2$bf.0f / bf.2$bf.pf
+```
+
+```{r lists-stroop1, eval = chains}
+stroop1.chainout <- list(
+  keep = keep
+  , sample = Samp.full
+  , theta = theta.full
+  , z = z.full
+  , rho = rho
+  , counter = count.decor
+)
+
+stroop1.bfs <- list(
+  bf0s = bf.spike
+  , bffs = bf.slab
+  , bfps = bf.pos.slab
+  , bfpss = bf.pos.ss
+  , bfpf = bf.2$bf.pf
+  , bf1f = bf.2$bf.1f
+  , bf1pf = bf.2$bf.1pF
+  , bf0f = bf.2$bf.0f
+  , prior.prob.spike = prior.spike
+  , prior.prob.slab = prior.slab
+  , prior.prob.pos.slab = prior.pos.slab
+  , post.prob.spike = all.spike
+  , post.prob.slab = all.slab
+  , post.prob.pos.slab = all.pos.slab
+)
+
+save(stroop1.chainout, file ="chainOut/stroop1Chainout")
+save(stroop1.bfs, file ="chainOut/stroop1Bfs")
+```
+
+```{r fig2, echo = F, fig.height = 5, fig.width=9}
+```
+
+<!-- ##Stroop 2 -->
+
+```{r data3}
+I <- length(unique(dat.stroop.p2$sub))
+J <- length(unique(dat.stroop.p2$cond))
+K <- tapply(dat.stroop.p2$rt, list(dat.stroop.p2$sub, dat.stroop.p2$cond), length)
+N <- sum(K)
+
+sub <- as.factor(dat.stroop.p2$sub)
+levels(sub) <- 1:I
+
+cond <- 1 - dat.stroop.p2$cond
+sub <- as.numeric(sub)
+y <- dat.stroop.p2$rt
+
+
+means.3 <- tapply(dat.stroop.p2$rt, list(dat.stroop.p2$sub, cond), mean)
+effect.3 <- means.3[, 2] - means.3[, 1]
+# plot(1:I, sort(effect.3), pch = 19, ylab = expression(hat(theta)), xlab = "Participants", col = "darkgray")
+# # thneg <- effect[effect < 0]
+# # points(1: length(thneg), sort(thneg), col = "red")
+# abline(h = 0)
+```
+
+```{r package-analysis3, cache = T}
+##Running models for our data set
+M <- 40000
+keep <- 4001:M
+r.alpha <- 1
+r.mutheta <- .16
+r.theta <- .1
+
+
+cond.pack <- ifelse(dat.stroop.p2$cond == 1, 1, 2)
+prep <- prep.models(sub, cond.pack)
+bf.3 <- makeBF(y, r.mutheta, r.theta, prep = prep, keep = keep)
+pack.pm.3 <- colMeans(bf$est.full)
+pack.theta <- bf.3$myTheta
+
+# plot(1:I
+#      , sort(effect.3)
+#      , pch = 19
+#      , ylab = expression(hat(theta))
+#      ,xlab = "Participants"
+#      , col = "darkgray"
+#      , main = "Estimates from the full model")
+# abline(h = 0)
+# points(colMeans(pack.theta)[order(effect.3)], pch = 19, col = "red")
+```
+
+```{r prep-chain3, eval = chains}
+M <- 100000
+keep <- 5001:M
+keep.int <- 10
+sd.cand <- .015
+count.decor <- 0
+keep.div <- seq(2,min(keep), keep.int)[-1]
+
+mu.alpha <- 1:M
+alpha <- matrix(nrow = M, ncol = I)
+mu.theta <- 0:(M - 1)
+theta <- matrix(nrow = M, ncol = I)
+
+z <- matrix(nrow = M, ncol = I)
+rho <- 1:M
+
+s2 <- 1:M
+g.alpha <- 1:M
+g.theta <- 1:M
+g.mu.th <- 1:M
+
+rho.a <- 1
+rho.b <- 1
+r.alpha <- 1
+r.theta <- .1
+r.mu.th <- 1/6
+
+alpha[1, ] <- means.3[, 1] - mean(means.3[, 1])
+theta[1, ] <- effect.3
+rho[1] <- rho.a/sum(rho.a, rho.b)
+z[1, ] <- ifelse(effect.3 < 0, 0, 1)
+g.theta[1] <- r.theta
+g.mu.th[1] <- r.mu.th
+
+sub.i <- sub[cond ==1]
+```
+
+```{r chain3, cache = T, eval = chains}
+for(m in 2:M){
+  slab <- as.logical(z[m-1, ])
+  
+  #mu.alpha
+  Y <- y - alpha[m-1, sub] - cond * (theta[m-1, ] * slab)[sub]
+  mu.alpha[m] <- rnorm(1, mean(Y), sqrt(s2[m-1] / N)) #flat prior
+  
+  #alpha
+  Y <- y - mu.alpha[m] - cond * (theta[m-1, ] * slab)[sub]
+  c <- tapply(Y, sub, sum) / s2[m-1]
+  v <- 1/(tapply(Y, sub, length) / s2[m-1] + 1/(g.alpha[m-1] * s2[m-1]))
+  alpha[m, ] <- rnorm(I, c * v, sqrt(v))
+  
+  #Decorrelating step for mu and alpha, see Morey et al., 2008
+  cand.add <- rnorm(1, 0, sd.cand)
+  u <- exp(-1/2 * 
+             sum((alpha[m,] + cand.add)^2 - alpha[m, ]^2)/
+             (g.alpha[m-1] * s2[m-1]))
+  if(rbinom(1, 1, min(u, 1)) == 1){
+    alpha[m, ] <- alpha[m,] + cand.add
+    mu.alpha[m] <- mu.alpha[m] - cand.add
+    count.decor <- count.decor + 1
+  }
+  if(m %in% keep.div){
+    acc.prob <- count.decor/keep.int
+    if(acc.prob > .5){
+      sd.cand <- sd.cand * 1.25
+    }
+    if(acc.prob < .25){
+      sd.cand <- sd.cand * .75
+    }
+    count.decor <- 0
+  }
+  
+  #theta
+  Y <- y - mu.alpha[m] - alpha[m, sub]
+  
+  c <- tapply(Y, list(sub, cond), sum)[, 2] / s2[m-1] + mu.theta[m-1] / (g.theta[m-1] * s2[m-1])
+  v <- 1/(tapply(Y, list(sub, cond), length)[, 2] / s2[m-1] + 1 / (g.theta[m-1] * s2[m-1]))
+  theta[m, slab] <- rnorm(sum(slab), c[slab] * v[slab], sqrt(v[slab]))
+  theta[m, !slab] <- rnorm(sum(!slab), mu.theta[m-1], sqrt(g.theta[m-1] * s2[m-1]))
+  
+  #s2
+  Error <- y - mu.alpha[m] - alpha[m, sub] - cond * (theta[m, ] * slab)[sub]
+  scale <- sum(Error^2)/2 + 
+    sum(alpha[m, ]^2)/(2*g.alpha[m-1]) + 
+    sum((theta[m, ] - mu.theta[m-1])^2)/(2*g.theta[m-1]) + 
+    mu.theta[m-1]^2/(2 * g.mu.th[m-1])
+  s2[m] <- rinvgamma(1, (N + I + I + 1)/2, scale)
+  
+  #z
+  dens.spike <- tapply(dnorm(Y[cond == 1], 0, sqrt(s2[m]), log = T)
+                           , sub[cond ==1], sum)
+  dens.slab <- tapply(dnorm(Y[cond == 1], theta[m, sub[cond ==1]], sqrt(s2[m]), log = T)
+                          , sub[cond ==1], sum)
+  prob <- 1/(1 + (1- rho[m-1]) / rho[m-1] * exp(dens.spike - dens.slab))
+  # prob[is.na(prob)] <- 0
+  z[m,] <- rbinom(I, 1, prob)
+  
+  #rho
+  rho[m] <- rbeta(1, rho.a + sum(z[m, ]), rho.b + sum(!z[m, ]))
+  
+  #mu.theta
+  c <- sum(theta[m,])/(g.theta[m-1] * s2[m-1])
+  v <- 1/(I/(g.theta[m-1] * s2[m-1]) + 1/(g.mu.th[m-1] * s2[m-1]))
+  mu.theta[m] <- rnorm(1, c * v, sqrt(v))
+  
+  #gs
+  gscale <- sum(alpha[m, ]^2) / (2*s2[m])
+  g.alpha[m] <- rinvgamma(1, .5 + I/2, gscale + r.alpha^2/2)
+  
+  gscale <- sum((theta[m, ] - mu.theta[m])^2) / (2*s2[m])
+  g.theta[m] <- rinvgamma(1, .5 + I/2, gscale + r.theta^2/2)
+  
+  gscale <- mu.theta[m]^2 / (2*s2[m])
+  g.mu.th[m] <- rinvgamma(1, 1, gscale + r.mu.th^2/2)
+  
+  # percents <- round(seq(1, M, length.out = 20))
+  # if(m %in% percents) print(paste0(which(percents == m) * 5, "%"))
+}
+```
+
+```{r chain-summary3, eval = chains}
+# plot(mu.alpha[keep], type = 'l')
+
+Samp.full <- cbind(mu.alpha, alpha, mu.theta, z * theta - mu.theta, s2, g.alpha, g.mu.th, g.theta)
+pm.full <- colMeans(Samp.full[keep,])
+rho.full <- rho
+z.full <- z
+theta.full <- theta
+```
+
+```{r prior-comp3, eval = chains, cache = T}
+Mprior <- 1000000
+
+#Prior all slab or all spike
+prior.rho <- rbeta(Mprior, rho.a, rho.b)
+prior.z <- rbinom(Mprior, I, prior.rho)
+prior.slab <- mean(prior.z == I)
+prior.spike <- mean(prior.z == 0)
+
+#Prior all slab and all positive
+p.g.mu <- rinvgamma(Mprior, .5, .5 * r.mu.th^2)
+p.mu <- rnorm(Mprior, 0, sqrt(p.g.mu))
+g <- rinvgamma(Mprior, .5, .5 * r.theta^2)
+count <- 1:Mprior
+p.theta <- matrix(ncol = I, nrow = Mprior)
+for (m in 1:Mprior) p.theta[m,] <- rnorm(I, p.mu[m], sqrt(g[m]))
+count <- rowSums(p.theta > 0) == I
+prior.pos.slab <- mean(prior.z == I & count)
+prior.pos <- mean(count)
+```
+
+```{r BF3, eval = chains}
+all.pos <- rowSums(theta.full[keep,] > 0)
+all.slab <- mean(rowSums(z.full[keep,]) == I)
+all.spike <- mean(rowSums(z.full[keep,]) == 0)
+all.pos.slab <- mean(all.pos == I & rowSums(z.full[keep,]) == I)
+
+#BF
+bf.spike <- all.spike / prior.spike
+bf.slab <- all.slab / prior.slab
+bf.pos.slab <- all.pos.slab / prior.pos.slab
+bf.pos.ss <- mean(all.pos == I)/prior.pos
+# 
+# bf.spike / bf.slab
+# bf.3$bf.0f
+# 
+# bf.spike / bf.pos.slab
+# bf.3$bf.0f / bf.3$bf.pf
+```
+
+```{r lists-stroop2, eval = chains}
+stroop2.chainout <- list(
+  keep = keep
+  , sample = Samp.full
+  , theta = theta.full
+  , z = z.full
+  , rho = rho
+  , counter = count.decor
+)
+
+stroop2.bfs <- list(
+  bf0s = bf.spike
+  , bffs = bf.slab
+  , bfps = bf.pos.slab
+  , bfpss = bf.pos.ss
+  , bfpf = bf.3$bf.pf
+  , bf1f = bf.3$bf.1f
+  , bf1pf = bf.3$bf.1pF
+  , bf0f = bf.3$bf.0f
+  , prior.prob.spike = prior.spike
+  , prior.prob.slab = prior.slab
+  , prior.prob.pos.slab = prior.pos.slab
+  , post.prob.spike = all.spike
+  , post.prob.slab = all.slab
+  , post.prob.pos.slab = all.pos.slab
+)
+
+save(stroop2.chainout, file ="chainOut/stroop2Chainout")
+save(stroop2.bfs, file ="chainOut/stroop2Bfs")
+```
+
+```{r result-fig, fig.height = 8, fig.width=6, warning=F, fig.cap = "Model estimates (left column) and Bayesian model comparison results for A./B. the priming data set; C./D. the location Stroop task; E./F. the color Stroop task. Left column: Crosses show observed effects with red crosses indicating negative effects. Points show model estimates with lighter shading indicating larger posterior weights of being in the slab. Right column: Bayes factors for all five models. The red frames indicate the winning model."}
+load("chainOut/stroop2Chainout")
+load("chainOut/stroop2Bfs")
+load("chainOut/stroop1Chainout")
+load("chainOut/stroop1Bfs")
+load("chainOut/subprimChainout")
+load("chainOut/subprimBfs")
+
+layout(matrix(1:6, ncol = 2, byrow = T), widths = c(.6, .4))
+par(mgp = c(2, 1, 0), mar = c(3.5, 4, 0, 1))
+
+bfs1 <- c(paste0("1-to-", round(subprim.bfs$bfpss/subprim.bfs$bffs, 1))
+          , paste0(round(subprim.bfs$bf0s/subprim.bfs$bfpss, 1), "-to-1")
+          , paste0("1-to-", round(1/subprim.bfs$bfpf, 1))
+          , paste0(round(subprim.bfs$bf1pf), "-to-1")
+          , paste0(round(subprim.bfs$bf0f), "-to-1"))
+
+mix.fig(effect
+        , subprim.chainout$z[subprim.chainout$keep,]
+        , subprim.chainout$theta[subprim.chainout$keep,]
+        , main = c("A.", "B.")
+        , int = c(.02, .1)
+        , bayesfactors = bfs1
+        , win = 4
+        )
+
+bfs3 <- c(paste0("1-to-", round(stroop2.bfs$bfpss/stroop2.bfs$bffs))
+          , paste0(round(stroop2.bfs$bf0s/stroop2.bfs$bfpss), "-to-1")
+          , paste0("1-to-", round(1/stroop2.bfs$bfpf))
+          , paste0(round(stroop2.bfs$bf1pf, 1), "-to-1")
+          , paste0("1-to-", round(1/stroop2.bfs$bf0f)))
+
+mix.fig(effect.3
+        , stroop2.chainout$z[stroop2.chainout$keep,]
+        , stroop2.chainout$theta[stroop2.chainout$keep,]
+        , main = c("C.", "D.")
+        , int = c(.02, .1)
+        , bayesfactors = bfs3
+        , win = 1
+        )
+
+bfs2 <- c(paste0(round(stroop1.bfs$bffs/stroop1.bfs$bfpss), "-to-1")
+          , paste0(round(stroop1.bfs$bf0s/stroop1.bfs$bfpss), "-to-1")
+          , paste0(round(stroop1.bfs$bfpf), "-to-1")
+          , paste0("1-to-", round(1/stroop1.bfs$bf1pf/1000)*1000)
+          , paste0("1-to-", round(1/stroop1.bfs$bf0f/10^72)*10^72))
+
+mix.fig(effect.2
+        , stroop1.chainout$z[stroop1.chainout$keep,]
+        , stroop1.chainout$theta[stroop1.chainout$keep,]
+        , main = c("E.", "F.")
+        , int = c(.05, .1)
+        , bayesfactors = bfs2
+        , win = 3
+        )
+```
+

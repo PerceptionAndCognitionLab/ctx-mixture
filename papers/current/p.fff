@@ -1,0 +1,59 @@
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+[htbp]
+\centering
+\includegraphics{p_files/figure-latex/classification-1.pdf}
+\caption{\label{fig:classification}Individual observed effects from a
+priming task ordered from lowest to highest. Shading of the points
+indicates strategy according to two criteria. Dark blue points indicate
+a positive priming effect for the criterion of BF\textgreater{}2. Light
+or dark blue points indicate a positive priming effect for the criterion
+of 80\%CIs excluding zero. White points indicate a null effect according
+to both criteria.}
+\end{figure*}
+\efloatseparator
+ 
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+[htbp]
+\centering
+\includegraphics{p_files/figure-latex/simple-model-fig-1.pdf}
+\caption{\label{fig:simple-model-fig}Models for pure and mixed strategies.
+A./B. Pure-strategy accounts without individual variation. C.
+Pure-strategy account with individual variability. D. A mixed-strategy
+account where some individuals have no effect and others have a positive
+effect. E. Common random-effects model that can neither exclude the
+possibility of strategy-mixtures nor distinguish between strategies.}
+\end{figure*}
+\efloatseparator
+ 
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+[htbp]
+\centering
+\includegraphics{p_files/figure-latex/modelfig-1.pdf}
+\caption{\label{fig:modelfig}Model specification and predictions for two
+exemplary participants. Left column: Model specifications conditional on
+specific prior settings. Middle column: Marginal model specifications
+integrated over prior distributions show correlation between
+individuals' effects. Right column: Resulting predictions from each
+model for data. The red dots show a hypothetical data point that is best
+predicted by the common-effect model (second row).}
+\end{figure*}
+\efloatseparator
+ 
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+[htbp]
+\centering
+\includegraphics{p_files/figure-latex/result-fig-1.pdf}
+\caption{\label{fig:result-fig}Model estimates (left column) and Bayesian
+model comparison results for A./B. the priming data set; C./D. the
+location Stroop task; E./F. the color Stroop task. Left column: Crosses
+show observed effects with red crosses indicating negative effects.
+Points show model estimates with lighter shading indicating larger
+posterior weights of being in the slab. Right column: Bayes factors for
+all five models. The red frames indicate the winning model.}
+\end{figure*}
+\efloatseparator
+ 

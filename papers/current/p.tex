@@ -1,0 +1,1644 @@
+\documentclass[english,man]{apa6}
+
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+    \usepackage{xltxtra,xunicode}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Mapping=tex-text,Scale=MatchLowercase}
+  \newcommand{\euro}{€}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{\usepackage{microtype}}{}
+
+% Table formatting
+\usepackage{longtable, booktabs}
+\usepackage{lscape}
+% \usepackage[counterclockwise]{rotating}   % Landscape page setup for large tables
+\usepackage{multirow}		% Table styling
+\usepackage{tabularx}		% Control Column width
+\usepackage[flushleft]{threeparttable}	% Allows for three part tables with a specified notes section
+\usepackage{threeparttablex}            % Lets threeparttable work with longtable
+
+% Create new environments so endfloat can handle them
+% \newenvironment{ltable}
+%   {\begin{landscape}\begin{center}\begin{threeparttable}}
+%   {\end{threeparttable}\end{center}\end{landscape}}
+
+\newenvironment{lltable}
+  {\begin{landscape}\begin{center}\begin{ThreePartTable}}
+  {\end{ThreePartTable}\end{center}\end{landscape}}
+
+  \usepackage{ifthen} % Only add declarations when endfloat package is loaded
+  \ifthenelse{\equal{\string man}{\string man}}{%
+   \DeclareDelayedFloatFlavor{ThreePartTable}{table} % Make endfloat play with longtable
+   % \DeclareDelayedFloatFlavor{ltable}{table} % Make endfloat play with lscape
+   \DeclareDelayedFloatFlavor{lltable}{table} % Make endfloat play with lscape & longtable
+  }{}%
+
+
+
+% The following enables adjusting longtable caption width to table width
+% Solution found at http://golatex.de/longtable-mit-caption-so-breit-wie-die-tabelle-t15767.html
+\makeatletter
+\newcommand\LastLTentrywidth{1em}
+\newlength\longtablewidth
+\setlength{\longtablewidth}{1in}
+\newcommand\getlongtablewidth{%
+ \begingroup
+  \ifcsname LT@\roman{LT@tables}\endcsname
+  \global\longtablewidth=0pt
+  \renewcommand\LT@entry[2]{\global\advance\longtablewidth by ##2\relax\gdef\LastLTentrywidth{##2}}%
+  \@nameuse{LT@\roman{LT@tables}}%
+  \fi
+\endgroup}
+
+
+  \usepackage{graphicx}
+  \makeatletter
+  \def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+  \def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+  \makeatother
+  % Scale images if necessary, so that they will not overflow the page
+  % margins by default, and it is still possible to overwrite the defaults
+  % using explicit options in \includegraphics[width, height, ...]{}
+  \setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\ifxetex
+  \usepackage[setpagesize=false, % page size defined by xetex
+              unicode=false, % unicode breaks when used with xetex
+              xetex]{hyperref}
+\else
+  \usepackage[unicode=true]{hyperref}
+\fi
+\hypersetup{breaklinks=true,
+            pdfauthor={},
+            pdftitle={Some do and some don't? Accounting for possible variation in strategies.},
+            colorlinks=true,
+            citecolor=blue,
+            urlcolor=blue,
+            linkcolor=black,
+            pdfborder={0 0 0}}
+\urlstyle{same}  % don't use monospace font for urls
+
+\setlength{\parindent}{0pt}
+%\setlength{\parskip}{0pt plus 0pt minus 0pt}
+
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+
+\ifxetex
+  \usepackage{polyglossia}
+  \setmainlanguage{}
+\else
+  \usepackage[english]{babel}
+\fi
+
+% Manuscript styling
+\captionsetup{font=singlespacing,justification=justified}
+\usepackage{csquotes}
+\usepackage{upgreek}
+
+
+
+\usepackage{tikz} % Variable definition to generate author note
+
+% fix for \tightlist problem in pandoc 1.14
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+% Essential manuscript parts
+  \title{Some do and some don't? Accounting for possible variation in strategies.}
+
+  \shorttitle{Variation in strategies.}
+
+
+  \author{Julia M. Haaf\textsuperscript{1}~\& Jeffrey N. Rouder\textsuperscript{1, 2}}
+
+  \def\affdep{{"", ""}}%
+  \def\affcity{{"", ""}}%
+
+  \affiliation{
+    \vspace{0.5cm}
+          \textsuperscript{1} University of Missouri\\
+          \textsuperscript{2} University of California, Irvine  }
+
+  \authornote{
+    \newcounter{author}
+    This paper was written in R-Markdown with code for data analysis
+    integrated into the text. The Markdown script is open and freely
+    available at
+    \url{https://github.com/PerceptionAndCognitionLab/ctx-mixture}. The data
+    used here are not original. We make these freely available with
+    permission of the original authors at
+    \url{https://github.com/PerceptionCognitionLab/data0/tree/master/contexteffects}.
+
+                      Correspondence concerning this article should be addressed to Julia M. Haaf, 205 McAlester Hall. E-mail: \href{mailto:JHaaf@mail.missouri.edu}{\nolinkurl{JHaaf@mail.missouri.edu}}
+                          }
+
+
+  \abstract{A primary question in experimental psychology is whether different
+people use different strategies when performing a task. In this paper,
+we focus on priming and context tasks where different strategies lead to
+different outcomes or effects. Consider, for example, a Stroop task
+where the target word is presented in the visual periphery. A
+strategy-pure case is when all people read the word quickly and
+automatically such that word identity interferes with color naming. A
+strategy-mixed case is as follows: Some people may choose to make an eye
+movement, read the word, and exhibit a Stroop effect; others may not
+make an eye movement, identify the color without reading, and show no
+Stroop effect. We define strategies as tied to ordinal relations and
+constraints among outcomes, and develop a family of Bayesian
+hierarchical models that capture a variety of these constraints. Doing
+so leads to new definitions of heterogeneity where some variation across
+people is due to variation within a common strategy, while other
+variation across people is due to variation of strategies. We apply this
+approach to Stroop interference experiments, and a near-liminal priming
+experiment where the prime may be below and above threshold for
+different people.}
+  \keywords{Cognitive psychometrics, Individual differences, Bayes factors, Mixture
+models \\
+
+    
+  }
+
+
+
+
+  \usepackage{bm}
+  \usepackage{pcl}
+  \usepackage{amsmath}
+  \usepackage{setspace}
+  \usepackage{bm}
+
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{definition}
+\newtheorem{example}{Example}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+\begin{document}
+
+\maketitle
+
+\setcounter{secnumdepth}{0}
+
+
+
+\emph{Some of them want to use you. Some of them want to get used by
+you.} (Eurythmics, 1983)
+
+A prevailing folk wisdom is that different people do things differently.
+In cognitive sciences this folk wisdom manifests in the concept of
+\emph{strategy} as being distinct from the concept of \emph{process}.
+Process refers to a series of cognitive operations that a participant
+may go through in completing a task. Strategy, on the other hand,
+implies that the participant may have several different processing paths
+to complete a task and selects among these. Take, for example, the
+learning of novel alphabet arithmetic statements such as \enquote{A + 3
+= D}. Useful processes for this task may be counting and recollection
+from memory (Logan, 1988). We say there are multiple strategies in play
+if participants use these two processes in different configurations. For
+example, there may be four different strategies: 1. A participant may
+solely use counting; 2. A participant may solely use recollection; 3. A
+participant may use one or the other on any given trial (Rickard, 2004);
+4. A participant may use both on every trial, say in a race
+configuration (Logan, 1992). If every participant uses the same
+strategy, we call the task a strategy-pure task. Alternatively, if
+different participants engage in different strategies, we call the task
+a strategy-mixed task. We note here that the choice of strategy need not
+refer to a conscious act. People may automatically rely on one strategy
+or another.
+
+As researchers, we are sometimes critiqued for not accounting for
+variations in strategies. For example, if we propose a race model for
+alphabet arithmatic, a reviewer might ask if all people race. This is a
+difficult critique, especially if reviewers assume \emph{a priori} that
+multiple strategies exist. The critique raises the important question of
+how to tell whether a task is strategy-pure or strategy-mixed. And
+having a principled means of ruling in or ruling out the possiblity of
+multiple strategies across individuals would be a generally applicable
+advance for theory development in cognitive psychology. Our goal here is
+just this---to present a means of addressing the multiple-strategy
+question across individuals.
+
+Providing empirical evidence for mixtures of strategies is a complicated
+task. Certainly, there will be cases where it is nearly impossible to do
+so. For instance, consider two very simiar processing models, say the
+diffusion model (Ratcliff, 1978) and the linear ballistic accumulator
+model (Brown \& Heathcote, 2008). It strikes us as impossible to detect
+mixtures of these models across people.
+
+Our approach here is to map simple behavioral outcomes to processing.
+This mapping is easiest in the context of specific tasks rather than in
+general. Consider a priming task, for example. In the task, participants
+are flashed a prime before identifying a subsequent target stimulus. If
+prime and target share features, that is if they are compatible, then we
+typically observe a reduction in the time to identify the target
+compared to incompatible primes. Because this is the typical effect, we
+refer to it as the positive priming effect. In contrast, a negative
+priming effect occurs when incompatible primes speed the identification
+of a target.
+
+To define the strategies that could be in play here, we identify three
+outcomes: The first outcome is the positive effect, and it is compatible
+with the prime activating the target. The second outcome is the negative
+effect. If it occured here, one would think of some contrast effect. The
+third outcome is no priming effect, and the strategy is that of
+successful segregation and supression of the prime. Now we are ready to
+define strategy-pure and strategy-mixed tasks. The priming task is
+strategy-pure if all participants show the same effect---that is all
+display true negative priming, all display a lack of priming, or all
+display true positive priming. A priming task is strategy-mixed if there
+are differences in the sign of the true effects. Perhaps some
+participants have a true null effect while others have a true positive
+effect.
+
+The question then is how can we assess evidence for strategy-pure and
+strategy-mixed cases when outcomes map to processing? There are two
+important considerations in pursuing this question. The first is the
+difference between observed and true effects. The second is the
+difference between variation within a process and variation across
+processes. We take these in turn:
+
+Understanding the distinction between observed and true effects is
+essential. We can certaintly graph observed effects for all individuals
+in any task such as the aforementioned priming task and determine
+whether everyones' observed effects are positive, negative or null. This
+procedure, however, does not solve the issue as the concept of
+measurement noise is disregarded. Statements about pure and mixed
+strategies therefore have to refer to true effects, and a model that
+incorporates noise is needed for inference.
+
+The priming example also illustrates the second consideration of
+individual variability. The distinction between variability within a
+process and across processes is necessary in this setup. It is plausible
+that individuals' effects may vary in size, say, one individual may have
+a true \(30\) ms priming effect while another may have a true \(300\) ms
+priming effect. This variability is an indicator for heterogeneity
+within a process. It does not, however, imply mixed strategies. On the
+other hand, if one individual has a true effect of \(-30\) ms
+(indicating a negative priming effect) and another individual has a true
+effect of \(30\) ms, then the task is strategy-mixed. Variation alone is
+not critical; The direction of effects is.
+
+\section{Stating evidence for
+strategies}\label{stating-evidence-for-strategies}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{p_files/figure-latex/classification-1.pdf}
+\caption{\label{fig:classification}Individual observed effects from a
+priming task ordered from lowest to highest. Shading of the points
+indicates strategy according to two criteria. Dark blue points indicate
+a positive priming effect for the criterion of BF\textgreater{}2. Light
+or dark blue points indicate a positive priming effect for the criterion
+of 80\%CIs excluding zero. White points indicate a null effect according
+to both criteria.}
+\end{figure}
+
+The strategy question belies a difficult conceptual issue---how to
+account for parsimony. While it is easy to wonder about multiple
+strategies, it is critical to realize a multiple strategy account may
+add unneeded complexity. The simplest explanation of a phenomenon is
+that all people use the same strategy. In this case, the lack of
+variation in process leads to simple theories that apply to all people.
+The more complicated explanation is that there is variation in
+strategies across individuals. One must not only specify multiple
+processing possibilities but explane why certain individuals follow one
+strategy while others follow different strategies. Even though the
+strategy-pure explanantion is simper, it is our experience that
+researchers are often quick to make a verbal argument for mixed
+strategies. Indeed, we are reminded of a well-known quote commonly
+attributed to Einstein: \enquote{Everything should be made as simple as
+possible, but not simpler.}\footnote{See
+  \url{http://quoteinvestigator.com/2011/05/13/einstein-simple/} for a
+  discussion on the attribution of the quote.}
+
+We argue that whether mixed strategies should be incorporated in a
+theoretical model is an empirical question. A precedented way of
+evidencing such mixed strategies is to classify individuals into
+different modes of processing. A good example comes from Little,
+Nosofsky, \& Denton (2011) who classified individuals as using serial,
+parallel or coactive processing based on the direction and magnitude of
+an interaction contrast. Figure~\ref{fig:classification} illustrates
+this classification method. The figure shows the ordered effects of each
+individual in a priming task.\footnote{Data comes from Pratte \& Rouder
+  (2009), Experiment 2. Details on the data set can be found in the
+  Application section.} As can be seen, a few people show a negative
+sample effect, many people have near-zero sample effects, and a few have
+substantial positive sample effects. One way of classifying people is to
+draw a confidence interval around each sample effect. In the figure we
+use the 80\%CIs to balance error rates. According to this classification
+scheme, 23 of the 33 individuals show an effect that is not
+distiguishable from zero (open dots), and 10 individuals show a positive
+effect. Another classification scheme is to compute Bayes factors for
+each indivdual. Figure~\ref{fig:classification} highlights the four
+individuals' effects that are more compatible with an effects-model than
+with the null. According to both approaches, this priming task is
+strategy-mixed with some people showing an effect and others not. There
+have been several mixture model approaches in psychology with the goal
+of classification (e.g. Houpt \& Fific, 2017; Little et al., 2011;
+Rouder, Morey, Speckman, \& Pratte, 2007).
+
+Thiele, Haaf, \& Rouder (2017) level a difficult critique at using
+classification schemes to assess the strategy question. In
+classification, sample noise is misinterpreted as evidence for the
+mixed-strategy conclusion. Heterogeneity is assumed, and nuisance
+variation may result in both null and effect interpretations. In fact,
+with an appropriate analysis to be presented subsequently, we show that
+the data in Figure~\ref{fig:classification} are best understood as a
+single, small, common effect with no variation across people.
+
+To mitigate Thiele et al.'s critique, Haaf \& Rouder (2017) and Thiele
+et al. (2017) developed a Bayesian model-comparison framework where some
+models are explicitly strategy-pure. In this framework, a single model
+is placed on the collection of individuals' effects rather than placing
+separate models on each individual's effect. Take, for example, the
+strategy-pure model where all individuals have a positive true priming
+effect. This model is implemented by simulaneously imposing order
+constraints---effects must be positive---on all individuals. How to
+assess all these order-constraints simultaneously is not known in
+conventional statistical frameworks. Fortunately, this assessment is
+conceptually straightforward in the Bayesian framework (Gelfand, Smith,
+\& Lee, 1992), and computational development is provided in Haaf \&
+Rouder (2017) and Klugkist, Kato, \& Hoijtink (2005). This Bayesian
+framework provides for the assessment of strategy-purity relative to an
+unconstrained model that is neither strategy-pure nor strategy-mixed.
+Here, we include a mixture model that is explicitly strategy-mixed.
+
+Figure~\ref{fig:simple-model-fig} graphically depicts the core of the
+models. The top row shows three strategy-pure models. Panel A is the
+most simple strategy-pure model. All people have a true null effect, and
+this null effect is indicated by the spike at zero. Panel B shows
+another simple strategy-pure model. Here, all people have the same true
+positive effect. Panel C shows a strategy-pure case with individual
+variability. Here, individuals' effects follow a distribution over
+positive values rather than a spike at one value. The distribution is
+restricted to positive values, and it is this restriction that defines
+the strategy purity. The bottom row shows two strategy-mixed models.
+Panel D is a mixture model: People either have no effect with a certain
+probability or they have a positive effect that follows a distribution
+with a complementary probability. Models of this type are called
+spike-and-slab models (George \& McCulloch, 1993; Mitchell \& Beauchamp,
+1988), with the spike referencing the point mass at zero and the slab
+referencing the distribution. People who are truly in the spike exhibit
+a different strategy than those who are truly in the slab. Finally,
+Panel E shows the usual random-effects model where individuals' true
+effects follow a normal distribution. Even though the model has a
+convenient mathematical form, it does not make a theoretical distinction
+between strategies on an individual level. We use this model as a
+none-of-the-above strategy-mixed option in cases where individual
+variation truly spans positive and negative effects.
+
+The goal here is to assess the evidence from the data for the various
+models in Figure~\ref{fig:simple-model-fig}. If models in the top row
+are favored, then we may favor a strategy-pure account. Alternatively,
+if models in the bottom row are favored, then we may favor a
+strategy-mixed account. Fortunately, Bayesian model comparison through
+Bayes factors is ideal for this application.
+
+In the next section, we provide a brief formal overview over the models
+depicted in Figure~\ref{fig:simple-model-fig}. Following this, we
+outline informally the Bayes factor model comparison strategy and how it
+penalizes complexity by focussing on predictions. With the Bayes factors
+developed, we analyze priming and Stroop interference data. While
+strategy-mixed processing is rare, we can document at least one case
+where it occurs.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{p_files/figure-latex/simple-model-fig-1.pdf}
+\caption{\label{fig:simple-model-fig}Models for pure and mixed strategies.
+A./B. Pure-strategy accounts without individual variation. C.
+Pure-strategy account with individual variability. D. A mixed-strategy
+account where some individuals have no effect and others have a positive
+effect. E. Common random-effects model that can neither exclude the
+possibility of strategy-mixtures nor distinguish between strategies.}
+\end{figure}
+
+\section{Models of constraints}\label{models-of-constraints}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{p_files/figure-latex/modelfig-1.pdf}
+\caption{\label{fig:modelfig}Model specification and predictions for two
+exemplary participants. Left column: Model specifications conditional on
+specific prior settings. Middle column: Marginal model specifications
+integrated over prior distributions show correlation between
+individuals' effects. Right column: Resulting predictions from each
+model for data. The red dots show a hypothetical data point that is best
+predicted by the common-effect model (second row).}
+\end{figure}
+
+The tasks we consider here have two conditions that can be termed
+\emph{compatible} and \emph{incompatible}, or more generally,
+\emph{control} and \emph{treatment}. It is most convenient to discuss
+the models in random-variable notation. We start with a basic linear
+regression model. Let \(Y_{ijk}\) denote the response time (RT) for the
+\(i\)th participant, \(i = 1, \ldots, I\), in the \(j\)th condition,
+\(j = 1, 2\), and the \(k\)th trial,
+\(k = 1, \ldots, K_{ij}\).\footnote{Due to data cleaning, variation in
+  the number of trials per person and condition is possible.} The linear
+regression model is
+
+\begin{equation}\label{basemodel}
+Y_{ijk} \sim \mbox{Normal}(\alpha_i + x_j\theta_i, \sigma^2).
+\end{equation}
+
+Here, \(\alpha_i\) is each individual's true intercept and \(\theta_i\)
+is each individual's true effect. The term \(x_j\) is an indicator for
+the condition, which is zero for compatible trials and one for
+incompatible trials. The parameter \(\sigma^2\) is the variance of
+repeated trials within a cell. The critical parameters in the model are
+the true individuals' effects, \(\theta_i\). Placing constraints on
+these effect parameters results in the models depicted in
+Figure~\ref{fig:simple-model-fig}.
+
+\subsubsection{Null Model}\label{null-model}
+
+The null model is denoted as \(\calM_0\) and specifies a true effect of
+zero for all individuals:
+
+\[
+  \begin{array}{llr}
+\calM_0: && \theta_i = 0.\\
+\end{array}
+\]
+
+This null model is more constraining than the usual null where the
+average across individuals is zero. Here, in contrast, each individual
+truly has no effect. An illustration of the model is shown in the first
+panel in Figure~\ref{fig:modelfig}. The figure illustrates the
+dimensionality of the models for two participants, and it is a guide
+useful for the following models. Shown are two hypothetical
+participants' true effects, \(\theta_1\) and \(\theta_2\), shown in the
+figure. For the null model, \(\theta_1\) and \(\theta_2\) have to be
+exactly zero. As a result, the density of the distribution of
+\(\theta_i\) is a spike at zero, corresponding to the dark point at zero
+in the figure. The model also corresponds to
+Figure~\ref{fig:simple-model-fig}A.
+
+\subsubsection{Common-effect Model}\label{common-effect-model}
+
+The common-effect model, denoted \(\calM_1\), corresponds to the spike
+in Figure~\ref{fig:simple-model-fig}B, and it is less constrained than
+the null. Individuals share a common effect with no individual
+variability,
+
+\[
+  \begin{array}{llr}
+\calM_1: && \theta_i = \nu^+,\\
+\end{array}
+\]
+
+where \(\nu^+\) denotes a constant, positive effect. The first panel in
+the second row of Figure~\ref{fig:modelfig} shows that both \(\theta_1\)
+and \(\theta_2\) are restricted to the diagonal line, depicting that
+individual participants' effects have to be equal. The diagonal is
+restricted to be positive to ensure that the model only accounts for
+effects in the expected direction. Every individual still has the exact
+same true effect, but this effect is only restricted to be positive, not
+fixed to a specific value.
+
+\subsubsection{Positive-Effects Model}\label{positive-effects-model}
+
+The positive-effects model is denoted \(\calM_+\), and it is the first
+model that introduces true individual variability. Even so, the model
+still specifies strategy-purity. True individuals' effects may vary, but
+are constrained to be positive:
+
+\[
+  \begin{array}{llr}
+\calM_+: && \theta_i \sim \mbox{Normal}^+(\nu, g_\theta \sigma^2),\\
+\end{array}
+\]
+
+where \(\mbox{Normal}^+\) refers to a normal distribution truncated
+below at zero, \(\nu\) is the mean parameter for this distribution and
+\(g_\theta \sigma^2\) is the variance term. The model is illustrated in
+the first panel of the third row of Figure~\ref{fig:modelfig}.\footnote{For
+  illustration, mean and variance of the slab are set to fixed values at
+  \(\nu = 0\) and \(g_\theta \sigma^2 = .07^2\) (in seconds).} Both
+\(\theta_1\) and \(\theta_2\) are restricted to be positive, but can be
+different. Values closer to zero are more plausible. The model roughly
+corresponds to Figure~\ref{fig:simple-model-fig}C. In both cases, the
+distribution on \(\theta_i\) is restricted to positive values. Yet, the
+shape in the figure is different from the one for the positive-effects
+model specified here.
+
+\subsubsection{Spike-and-slab model}\label{spike-and-slab-model}
+
+The spike-and-slab model is denoted \(\calM_{SS}\). Here, the
+distribution on \(\theta_i\) consists of two components, the spike and
+the slab. Whether an individual's effect is truly in the slab or in the
+spike is indicated by the parameter \(z_i\). If an effect is truly null,
+\(z_i = 0\); if an effect is truly positive \(z_i = 1\). The
+distribution of \(\theta_i\) conditional on \(z_i\) is
+
+\begin{align*}
+\calM_{SS}:
+\qquad
+\begin{array}{l}
+\theta_i | (z_i = 1) \sim \mbox{Normal}^+(\nu, g_\theta \sigma^2),\\
+\theta_i | (z_i = 0) = 0,
+\end{array}
+\end{align*}
+
+Here, the spike corresponds to the null model and the slab corresponds
+to the positive-effects model. In model specification, every individual
+has some probability of being in the spike and a complementary
+probability of being in the slab. The first panel in the fourth row of
+Figure~\ref{fig:modelfig} shows the model specifications for two
+participants. For these hypothetical individuals, four compinations of
+true effects are plausible: 1. Both individuals are in the spike. In
+this case, \(\theta_1\) and \(\theta_2\) have to be zero, indicated in
+the figure by the dark point at (0,0). 2. Both participants are in the
+slab. \(\theta_1\) and \(\theta_2\) can take on any positive value,
+restricting the true effects to the upper right quadrant in the figure.,
+just as with the positive-effects model. 3. \(\theta_1\) is in the slab
+and \(\theta_2\) is zero. This case is represented by positive
+\(\theta_1\) values on the horizontal line at \(y = 0\). 4. \(\theta_2\)
+is in the slab and \(\theta_1\) is zero. This case is represented by
+positive \(\theta_2\) values on the vertical line at \(x = 0\).
+
+\subsubsection{Unconstrained Model}\label{unconstrained-model}
+
+The unconstrained model, denoted \(\calM_u\), is the random-effects
+model in Figure~\ref{fig:simple-model-fig}. Here, a normal distribution
+without any constraint is placed on the individual's true effects:
+
+\[
+  \begin{array}{llr}
+\calM_u: && \theta_i \sim \mbox{Normal}(\nu, g_\theta \sigma^2).\\
+\end{array}
+\]
+
+The first panel in the last row of Figure~\ref{fig:modelfig} shows these
+model specifications. True individuals' effects can take on any values,
+and values closer to zero are more plausible. With this model, there is
+no explicit way of taking differences in strategies into account.
+
+\subsection{Prior specifications and hierarchical
+constraints}\label{prior-specifications-and-hierarchical-constraints}
+
+The five models are analyzed in a Bayesian framework. Bayesian analysis
+requires a careful specification of prior distributions on parameters.
+These priors are needed for parameters \(\alpha_i\), the individual
+intercepts; \(\sigma^2\), the variance of responses in each
+participant-by-condition cell; the collection of \(z_i\), each
+individual's indicator of being in the spike or the slab; \(\nu\), the
+mean of effects; and \(g_\theta\), the variance of effects in
+effect-size units. The priors parameters that are common to all models
+are not of particular concern. They do not affect model comparison, and
+we follow Haaf \& Rouder (2017) in specification.\footnote{An exception
+  are prior settings on \(z_i\), the indicators of whether an individual
+  is truly in the spike or the slab. We set
+  \(z_i \sim \mbox{Bernoulli}(\rho)\), where \(\rho\) is the probability
+  of being in the slab. We placed a hierarchical prior on
+  \(\rho \sim \mbox{Beta}(a, b)\), where \(a = b = 1\). These prior
+  settings represent an equal prior probability of being in the spike or
+  the slab, and changing them may influence model comparison greatly.
+  For this application, we decided not to explore other settings,
+  because we do not have any theoretical implications of higher slab or
+  spike prior probability.} Several of the models ascribe individual
+differences across true effects. In this regard, individuals should be
+treated as random, and a hierarchical treatment is appropriate (Lee,
+2011; Rouder \& Lu, 2005; Rouder, Lu, Morey, Sun, \& Speckman, 2008). We
+model individual differences as coming from either a normal or truncated
+normal with free mean and variance parameters. Prior settings on these
+parameters, \(\nu\) and \(g_\theta \sigma^2\), may affect inference. In
+the following, we describe the reasons for this influence. We show the
+effects of reasonable ranges of prior settings on these two parameters
+in the Discussion.
+
+The shared mean parameter, \(\nu\), induces correlation between the
+individuals' effects. Take, for example, the unconstrained model. We can
+recast the model on \(\theta_i\) as \(\theta_i = \nu + \epsilon_i\),
+where \(\nu\) remains the population mean and
+\(\epsilon_i \sim \mbox{Normal}(0, g_\theta \sigma^2)\) is the
+independent residual variation specific to an individual. The parameter
+\(\nu\) is not given. It must be estimated. It has variability in this
+regard and this variability induces a correlation between individuals'
+effects. We take this variation into account by computing a marginal
+model on \(\theta_i\). The marginal models are shown in the second
+column of Figure~\ref{fig:modelfig}. For the the unconstrained model and
+the other models that specify variability, the correlation is apparent
+in the figure. This correlation induces dependency between
+\(\theta_i\)s, and the resultant of this dependency is a reduction in
+the dimensionality of the models. This reduction makes the unconstrained
+model, for example, more similar to the common-effect model which is
+important for model comparison.
+
+\subsection{Estimation model}\label{estimation-model}
+
+The above five models describe possible constraints on individuals'
+effects. Assessing how applicable these models are to data is the core
+means to determining whether a task is strategy-pure or strategy-mixed.
+In the next section, we discuss a formal inferential approach---Bayes
+factors--- for model comparison. Even though model comparison is the
+main target, estimating parameters and visualizing them remains a tool
+for understanding structure in data. When constructing an estimation
+model here, we have two goals: One is to have relatively few constraints
+on the parameters; the second is to respect the possibility of true null
+effects. To meet these goals, we place a generalized spike-and-slab
+model on \(\theta_i\).
+
+The model has a spike at zero and a normal distribution as slab. It may
+be viewed as a mix between panel A and panel E in
+Figure~\ref{fig:simple-model-fig}. The distribution of each individual's
+effect, \(\theta_i\), is
+
+\begin{align*}
+\theta_i | (z_i = 1) &\sim \mbox{Normal}(\nu, g_\theta \sigma^2),\\
+\theta_i | (z_i = 0) &= 0.\\
+\end{align*}
+
+This spike-and-slab model, just as the unconstrained model in
+Figure~\ref{fig:simple-model-fig}, cannot distinguish between
+strategies. It is, however, appropriate for estimating posterior spike
+and slab probabilities and the collection of \(\bftheta\).
+
+\section{Evidence for constraints}\label{evidence-for-constraints}
+
+In the previous sections we develop five models, the null model, the
+common-effect model, the positive-effects model, the spike-and-slab
+model, and the unconstrained model that embed various meaningful
+constraints. Of these five, the spike-and-slab and unconstrained models
+are strategy-mixed cases; the null, common-effect and positive-effects
+models are stratgy-pure cases. Here, we provide a discussion on how to
+state evidence for these five models in the Bayesian framework. Rather
+than providing a formal discourse, which may be found in Jeffreys
+(1961), Kass \& Raftery (1995), and Morey, Romeijn, \& Rouder (2016), we
+provide an informal discussion that we have previously presented in
+Rouder, Morey, \& Wagenmakers (2016) and Rouder (2017). Informally,
+evidence for models reflects how well they predict data.
+
+The right column of Figure~\ref{fig:modelfig} shows predictions for data
+from each of the five models. These predictions are for observed
+effects, \(\hat{\theta}\), for each of the two exemplary participants.
+Note that predictions are defined on data while model specifications are
+defined on true effects, and this difference is reflected in the plotted
+quantities in the figure. For the null model, for example, \emph{true}
+effects, left column, have to be exactly zero, and the \emph{observed}
+effects, right column, are predicted to be near (0,0). The predictions
+are affected by sample noise, inasmuch as sample noise smears the form
+of the model.\footnote{More technically, the predictions are the
+  integral
+  \(\int_{\bm{\theta}} f(\bm{Y}|\bm{\theta})\pi(\bm{\theta})d\bm{\theta}\)
+  where \(f(\bm{Y}||\bm{\theta})\) is the probability density of
+  observations conditional on parameter values and \(\pi(\bm{\theta})\)
+  is the probability density of the parameters.} The remaining rows of
+Figure~\ref{fig:modelfig} show the predictions for the common-effect,
+positive-effects, spike-and-slab, and unconstrained models. In all
+cases, the precictions are smeared versions of the models.
+
+Once the predictions are known, model comparison is simple. All we need
+to do is note where the data fall. The red dots in the right column of
+Figure~\ref{fig:modelfig} denote hypothetical observed participants'
+effects. These observed effects, 40 ms for participant 1 and 60 ms for
+participant 2, are both positive and about equal, and we might suspect
+that the common-effect model does well. To measure how well, we note the
+density of the prediction at the observed data point. The densities for
+the models have numeric values, and we may take the ratio to describe
+the relative evidence from the data for one model vs.~another. For
+example, the best fitting model in the figure, the common-effect model,
+has a density that is three times the value of that of the unconstrained
+model. Hence, the data are predicted three times as accurately under the
+common effect model than under the unconstrained model. This ratio is
+the \emph{Bayes factor}, and it serves as the principled measure of
+evidence for one model compared to another in the Bayesian framework.
+
+Bayes factors are conceptually straightforward---one simply computes the
+predictive densities at the observed data. Nonetheless, this computation
+is often inconvenient in practice. It entails the integration of a
+multidimensional integral which is often impossible in closed form and
+may be slow and innacurate with numeric methods. We follow here the
+development by Haaf \& Rouder (2017) who provide the details of model
+comparison between the null, common-effect, positive-effects and
+unconstrained models. Their development builts on analytical solutions
+pioneered by Zellner \& Siow (1980) and expanded for ANOVA by Rouder,
+Morey, Speckman, \& Province (2012). These analytical solutions are used
+for comparisons among the null, common effect, and unconstrained models.
+The development also employs the \emph{encompassing approach} introduced
+by Klugkist et al. (2005). This approach may be used for comparisons
+with the positive-effects model.
+
+New to this paper are model comparisons with the spike-and-slab model.
+Although the spike-and-slab model is precedented and popular, we are
+unaware of any prior development for comparing it as a whole to
+alternatives. Our approach is a straightforward application of the
+encompassing approach. The Bayes factor between the null model and the
+spike-and-slab model is given by
+
+\[
+B_{0 SS} = \frac{P(\bm{z} = \bm{0}|\bfY,\calM_{SS})}{P(\bm{z} = \bm{0}|\calM_{SS})},
+\]
+
+where the event \(\bm{z} = \bm{0}\) indicates that every individual is
+in the spike. This Bayes factor is the posterior probability that all
+individuals are in the spike relative to the prior probability of the
+same event. The same approach can be used for comparing the
+spike-and-slab model to the positive-effects model, using the posterior
+and prior probabilities that every individual is in the slab.
+
+Computation of these probabilities is straightforward in MCMC sampling.
+Let \(\bm{z}[m]\) denote a vector of \(i\) samples of \(z\) (one for
+each individual) on the \(m\)th iteration under the spike-and-slab
+model. The \(m\)th iteration is considered evidential of the null model
+if all \(I\) elements of \(\bm{z}[m]\) are zero, that is, on this
+iteration, every individual's effect \(\theta_i\) is sampled from the
+spike. Let \(n_{01}\) be the number of evidential iterations from the
+posterior, and let \(n_{00}\) be the number of evidential iterations
+from the prior. Then, the Bayes factor is
+
+\[
+B_{0 SS} = \frac{n_{01}}{n_{00}}.
+\]
+
+To compute the Bayes factor of the spike-and-slab model to the remaining
+models, we use the well-known transitivity of Bayes factors (Rouder \&
+Morey, 2012).
+
+\section{Application}\label{application}
+
+We apply the five models to three different data sets: A priming data
+set provided by Pratte \& Rouder (2009), and two Stroop experiments
+provided by Pratte, Rouder, Morey, \& Feng (2010). The goal here is to
+answer the question wether the tasks deployed in the three experiments
+are strategy-pure or strategy-mixed. We provide estimation and model
+comparison results for the three data sets and discuss them in the light
+of the experimental paradigms.\footnote{All analyses were conducted
+  using R (3.3.1, R Core Team, 2016) and the R-packages \emph{abind}
+  (1.4.5, Plate \& Heiberger, 2016), \emph{BayesFactor} (0.9.12.2, Morey
+  \& Rouder, 2015), \emph{beeswarm} (0.2.3, Eklund, 2016), \emph{coda}
+  (0.19.1, Plummer, Best, Cowles, \& Vines, 2006), \emph{colorspace}
+  (Stauffer, Mayr, Dabernig, \& Zeileis, 2009; 1.3.2, Zeileis, Hornik,
+  \& Murrell, 2009), \emph{curl} (2.8.1, Ooms, 2017), \emph{devtools}
+  (1.13.2, Wickham \& Chang, 2016), \emph{diagram} (1.6.3, Soetaert,
+  2014a), \emph{dotCall64} (Gerber, Moesinger, \& Furrer, 2015, 0.9.4,
+  2016), \emph{fields} (9.0, Douglas Nychka, Reinhard Furrer, John
+  Paige, \& Stephan Sain, 2015), \emph{gmm} (1.6.1, Chaussé, 2010),
+  \emph{maps} (3.2.0, Richard A. Becker, Ray Brownrigg. Enhancements by
+  Thomas P Minka, \& Deckmyn., 2016), \emph{MASS} (7.3.45, Venables \&
+  Ripley, 2002), \emph{Matrix} (1.2.10, Bates \& Maechler, 2017),
+  \emph{MCMCpack} (1.4.0, Martin, Quinn, \& Park, 2011), \emph{msm}
+  (1.6.4, Jackson, 2011), \emph{mvtnorm} (1.0.6, Genz \& Bretz, 2009;
+  Wilhelm \& G, 2015), \emph{papaja} (0.1.0.9492, Aust \& Barth, 2017),
+  \emph{plotrix} (3.6.5, J, 2006), \emph{sandwich} (2.3.4, Zeileis,
+  2004, 2006), \emph{shape} (1.4.2, Soetaert, 2014b), \emph{spam}
+  (2.1.1, Furrer \& Sain, 2010; Gerber \& Furrer, 2015),
+  \emph{spatialfil} (0.15, Dinapoli \& Gatta, 2015), and \emph{tmvtnorm}
+  (1.4.10, Wilhelm \& G, 2015).}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{p_files/figure-latex/result-fig-1.pdf}
+\caption{\label{fig:result-fig}Model estimates (left column) and Bayesian
+model comparison results for A./B. the priming data set; C./D. the
+location Stroop task; E./F. the color Stroop task. Left column: Crosses
+show observed effects with red crosses indicating negative effects.
+Points show model estimates with lighter shading indicating larger
+posterior weights of being in the slab. Right column: Bayes factors for
+all five models. The red frames indicate the winning model.}
+\end{figure}
+
+\subsection{Priming Data Set}\label{priming-data-set}
+
+The priming data used here, reported by Pratte \& Rouder (2009), comes
+from a number priming task.\footnote{We analyze the data from Pratte and
+  Rouder's Experiment 2. In the original experiment, primes were shown
+  for durations of 16, 18, or 20 ms. We combined data from the 16 and 18
+  ms conditions and disregarded the difference in duration for this
+  analysis. There were no apparent differences in individuals' effects
+  across the included conditions.} We suspect this task is
+strategy-mixed with some participants being affected by briefly
+presented primes and others not being affected. In the task, numbers
+were presented as primes, followed by target digits that had to be
+classified as greater or less than five. There is a critical congruent
+and incongruent condition: The congruent condition is when the prime and
+the target are both on the same side of five, e.g.~the prime is three
+and the target is four; the incongruent condition is when the prime and
+the target are opposite, e.g.~the prime is eight and the target is four.
+The priming effect refers to the speed-up in responding to the target in
+the congruent versus the incongruent condition. Prime presentation was
+brief by design, and the goal was to bring it near the threshold of
+detection. Yet, it is well known that this threshold varies considerably
+across people. For example, Morey, Rouder, \& Speckman (2008) report
+high variability in individual threshold estimates for prime perception.
+Other researchers use adaptive methods to change presentation duration
+individually for each participant until identification of primes is on
+chance (e.g. Dagenbach, Carr, \& Wilhelmsen, 1989). For any given
+presenation duration, some individuals may be able to detect the prime
+and others may not. This difference may lead to variablity in processing
+with some people processing the primes and others not. Such variability
+corresponds to our strategy question.
+
+\subsubsection{Results}\label{results}
+
+Figure~\ref{fig:result-fig}A provides two sets of parameter-estimation
+results. The first set, denoted by the crosses that span from -0.02
+seconds to 0.03 seconds, are the observed effects for the individuals,
+and these are the same points that are plotted in
+Figure~\ref{fig:classification}. Observed effects in this context are
+the differences in individuals' sample means for the incongruent and
+congruent conditions. Crosses are coloured red or gray to indicate
+whether the observed effects are negative or positive, respectively.
+Overall, effects are relatively constrained with no participant having a
+more than 31 millisecond effect in absolute value. Estimates from the
+hierarchical estimation model are shown in blue circles. These estimates
+are posterior means of \(\theta_i\) where the averaging is across the
+spike and slab components. The posterior weights of being in the slab
+are denoted by the shading of the points with lighter shading
+corresponding to greater weights. The 95\% credible intervals, again
+across the spike and slab components, are shown by the shaded region.
+
+We focus on the contrast between the sample effects and the model effect
+estimates. Although the sample effects subtend a small range of about 50
+ms, the model-based estimates subtend a much smaller range from almost
+no effect to an 11 ms effect. These hierarchical estimates reflect the
+range of true variation after sample noise is accounted for. The
+compression is known as regularization or shrinkage, and prevents the
+analyst from overstating evidence for heterogeneity. Hierarchical
+regularization is an integral part of modern inference (Efron \& Morris,
+1977; Lehmann \& Casella, 1998), and should always be used whereever
+possible (Davis-Stober, Dana, \& Rouder, 2017). The individuals'
+posterior probability of being in the slab ranges from 0.31 to 0.65.
+
+From the model estimates, it is evident that individual effects are
+tightly clustered and slighty positive with a mean of 4 ms. Yet, these
+results are not sufficient to answer the strategy question. It is
+unclear whether everyone has a small effect or some people have no
+effect while others have a slightly larger one. To answer this question
+we analyse the above models and compare them with Bayes factors. The
+results are shown in Figure~\ref{fig:result-fig}B. The common-effect
+model is preferred, indicating that everyone has a single, common
+effect. The next most parsemonious model is the null model, where all
+individuals have no effect. The best-performing strategy-mixed model is
+the spike-and-slab model, and the Bayes factor between it and the
+common-effect model is 31-to-1 in favor of the common-effect model. We
+take this Bayes factor as evidence for strategy-purity in this task:
+Everybody has a small priming effect.
+
+\subsection{A location Stroop
+experiment}\label{a-location-stroop-experiment}
+
+Pratte et al. (2010) ran a series of Stroop and Simon interference
+experiments to assess distributional correlates of these inference
+effects. As part of their investigations they constructed stimuli that
+could be used in either task, and with this goal, they presented the
+words \enquote{LEFT} and \enquote{RIGHT} to either the left or right
+side of the screen. In the Stroop tasks, participants identified the
+location; in the Simon task, they identified the meaning.
+
+In their first attempt to use these stimuli, Pratte et al. (2010) found
+a 12 ms average Stroop effect. This effect is rather small compared to
+known Stroop effects, and was too small for a distributional analysis.
+To Pratte et al., the experiment was a failure. At the time, Pratte et
+al. speculated that participants did not need to read the word to assess
+the location. They could respond without even moving their eyes from
+fixation, and even though reading might be automatic at fixation, it may
+not be in the periphery. To encourage participants to read the word,
+Pratte et al. subsequently added a few catch trials. On these catch
+trials, the word \enquote{STOP} was displayed as the stimulus to the
+left or right of fixation, and participants had to withhold their
+response. This manipulation resulted in much larger Stroop effects.
+
+Here we analyze data from the failed experiment where there was a small
+Stroop effect of 12 ms (Experiment 2 from Pratte et al., 2010). Our
+question is whether some participants used the strategy of not shifting
+their attention to the word in the periphery while others did. In this
+scenario, the task is strategy-mixed with some participants showing a
+true Stroop effect and others showing none at all. The alternative is a
+strategy-pure account where all participants exhibited a small Stroop
+effect similar to the priming effect above.
+
+\subsubsection{Results}\label{results-1}
+
+Observed effects are shown by the crosses in
+Figure~\ref{fig:result-fig}C. Of the 38 participants, 10 show an
+observed negative priming effect, shown by red crosses in the figure.
+The average effect is 11.90 ms with individuals' effects ranging from
+-19 ms to 68 ms.
+
+Estimates from the hierarchical estimation model are shown in blue
+circles, and 95\% credible intervals are shown by the shaded region.
+Again, hierarchical shrinkage is large, reducing the range from 87 ms
+for observed effects to 45 ms for the model estimates. Of note is also
+that the individuals' posterior probability of being in the slab varies
+considerably, ranging from 0.19 to 0.99. This difference in posterior
+weight suggests that some individuals are better described by the spike
+while others are almost definitively in the slab.
+
+The model comparison results in Figure~\ref{fig:result-fig}D confirm
+this consideration: the Bayes factor between the spike-and-slab model
+and the runner-up common-effect model is 3-to-1 in favor of the
+spike-and-slab model. This Bayes factor provides slight evidence for
+mixed strategies in this particular Stroop experiment.
+
+\subsection{A color Stroop experiment}\label{a-color-stroop-experiment}
+
+Pratte et al. (2010) ran another experiment, a more standard Stroop task
+with color terms (Experiment 1 from Pratte et al., 2010). For this
+experiment, in contrast to the failed Stroop experiment, we expected
+task-purity with everyone showing a Stroop effect.
+
+\subsubsection{Results}\label{results-2}
+
+Parameter estimates are shown in Figure~\ref{fig:result-fig}E.
+Individuals' observed effects are fairly large with an average of 91 ms
+with only one participant showing an observed negative effect. There is
+less shrinkage than for the other data sets. The range for the observed
+effects is 221 ms; the range for the hierarchical estimates is 144 ms.
+Posterior probabilities of being in the slab are high with only one
+person having a lower probability than .85.
+
+The model comparison results are shown in Figure~\ref{fig:result-fig}F.
+Overall, there is most evidence for the positive-effects model. The
+second-best model is the unconstrained model. The Bayes factor between
+these two models is 8-to-1 in favor of the positive-effects model, and
+this Bayes factor can be interpreted as evidence for the strategy-purity
+of the task. The spike-and-slab model fares even worse with a Bayes
+factor of 1-to-23 compared to the positive-effects model. The results
+suggest that the Stroop task is strategy-pure --- if targets are
+presented at fixation.
+
+\section{Discussion}\label{discussion}
+
+In this paper, we address whether people use differing strategies for
+tasks where the sign of the behavioral outcome measure maps well into
+different processing The example we use here is priming, and we
+trichotomize the outcome into three basic relations: responses to
+congruent targets are faster than to incongruent ones (positive
+priming), responses to congruent targets are slower than to incongruent
+ones (negative priming), and responses to congruent targets are equally
+fast as to incongruent ones (no priming). Whenever a behavioral outcome
+can be trichotomized this way, we can assess whether processing is
+strategy-pure or strategy-mixed. Obvious applications include context
+effects (e.g., Stroop, flanker, Simon etc.) and strength effects (e.g.,
+stimulus strength, mnemonic strength, etc.).
+
+The approach we take here is Bayesian model comparison across five
+models: a strategy-pure null model; a strategy-pure common effect model;
+a strategy pure slab model; a strategy-mixed spike-and-slab model; and a
+strategy-mixed slab model. The novel element here is the usage of the
+spike-and-slab model. Although spike-and-slab models are used frequently
+in statistics, they are used to categorize which covariates (people in
+our case) are in the spike and which are in the slab. Our usage is
+novel---we ask how well this spike-and-slab structure predicts the data
+relative to the other models.
+
+Several psychologists have previously asked the related question of
+whether mixtures account for data. In cognitive psychology, the most
+common application is whether responses on trials are mixtures of two
+bases. Falmagne (1968) was perhaps the earliest to formally explore this
+notion. He asked whether response times for a given individual are the
+mixture of a stimulus-driven process and a guessing process. Indeed,
+this type of query has been explored in a number of domains (Klauer \&
+Kellen, 2010; Province \& Rouder, 2012; e.g. Yantis, Meyer, \& Smith,
+1991).
+
+Our approach differs markedly from these previous queries. Our focus is
+not on characterizing trial-by-trial variability but on variability
+across individuals. We do not make as detailed commitments to specific
+cognitive architectures, but provide a general approach based on ordinal
+relations of less-than, same-as, and greater-than. In this regard, our
+approach is more similar to latent class models used in structural
+equation modeling (Skrondal \& Rabe-Hesketh, 2004). In these models,
+vectors of outcome measures are assumed to come from the mixture of
+latent classes of people, and the goal is to identify the classes and
+categorize people into these classes. One critique of this approach is
+that the models are so weakly identified that it is difficult to
+reliably recover class structure (Bauer \& Curran, 2003). We avoid this
+problem by restriction. We restrict our classes into three that are well
+defined as the sign of the outcome measure. In summary, while our
+approach is similar in some regards to previous, the statistical
+development is novel in critical ways.
+
+We apply this approach to three exemplary data sets and find, at least
+for one case, some support for the mixed-strategy claim. We think,
+however, that mixtures of strategies are relatively rare in cognitive
+psychology where experimental paradigms are relatively well defined.
+Only in cases where tasks are ill-defined, i.e.~participants have the
+degrees of freedom to decide on a strategy that was not anticipated by
+the researchers, mixtures may occur. This was the case in our location
+Stroop example, where participants were able to avoid reading the target
+words by fixating the center of the screen and still successfully
+completing the task.
+
+\subsection{Concerns}\label{concerns}
+
+\subsubsection{Normal Specification}\label{normal-specification}
+
+One concern with the proposed approach is the reliance on normal
+parametric model specifications. The advantage of the normal
+specification is computational convenience. With it, the many dimensions
+of the high-dimension integrals that define the Bayes factor may be
+computed symbolically to high precision. Without it, we suspect numeric
+integration would be exceedingly slow and inaccurate. Yet, researchers
+may be concerned about the misspecification of the normal. Here, for
+example, we focus on applications with response times. RT is skewed
+rather than symmetric, and the standard deviation tends to increase with
+the mean (Luce, 1986; Rouder, Yue, Speckman, Pratte, \& Province, 2010;
+Wagenmakers \& Brown, 2007).
+
+We think this concern is misplaced. The main reason is that we focus on
+the analysis of ordinal relations among true means. If we knew
+individual's true means, then we could answer the processing questions
+without any need to know or consider the true shapes or true variances.
+The inference here therefore inherently has all the robustness of ANOVA
+or regression, which is highly robust for skewed distributions, so long
+as the left tail is thin. Indeed, RTs tend to have thin left tails that
+fall off no slower than an exponential (Burbeck \& Luce, 1982; Van
+Zandt, 2000 Wenger \& Gibson (2004)).
+
+Thiele et al. (2017) addressed this concern through simulation. They
+considered highly similar models and performed inference with similarly
+computed Bayes factors. In simulation, they generated data from a
+shifted log normal with realistic skewness and with means and variances
+that varied across individuals and the manipulation. As expected, they
+found exceptional robustness, and the reason is clear. The main
+inferential logic is dependent only on true means, and the normal is a
+perfectly fine model for assessing this quantity even when the data are
+not normally distributed.
+
+\subsubsection{Prior Sensitivity}\label{prior-sensitivity}
+
+\begin{table}[tbp]
+\begin{center}
+\begin{threeparttable}
+\caption{\label{tab:sensitivity-tab}Sensitivity of Bayes factors to prior settings}
+\begin{tabular}{llrrrrr}
+\toprule
+Scale on $\nu$ & \multicolumn{1}{c}{Scale on $\epsilon$} & \multicolumn{1}{c}{$\calM_{0}$} & \multicolumn{1}{c}{$\calM_{1}$} & \multicolumn{1}{c}{$\calM_{+}$} & \multicolumn{1}{c}{$\calM_{SS}$} & \multicolumn{1}{c}{$\calM_{u}$}\\
+\midrule
+\bf{Priming} &  &  &  &  &  & \\
+\ \ \ \bf{1/6} & \bf{1/10} & 0.12 & * & 0.01 & 0.03 & 0.02\\
+\ \ \ 1/12 & 1/20 & 0.06 & * & 0.05 & 0.06 & 0.04\\
+\ \ \ 1/12 & 1/5 & 0.14 & * & 0.02 & 0.04 & 0.04\\
+\ \ \ 1/3 & 1/20 & 0.06 & * & 7.31e $-8$ & 0.002 & 1.06e $-5$\\
+\ \ \ 1/3 & 1/5 & 0.14 & * & 3.57 e $-8$ & 9.58e $-4$ & 1.01e $-5$\\
+\bf{Location Stroop} &  &  &  &  &  & \\
+\ \ \ \bf{1/6} & \bf{1/10} & 4.13e $-4$ & 0.31 & 0.05 & * & 0.1\\
+\ \ \ 1/12 & 1/20 & 1.18e $-4$ & 0.12 & 0.12 & * & 0.08\\
+\ \ \ 1/12 & 1/5 & 2.69e $-4$ & 0.19 & 0.04 & * & 0.07\\
+\ \ \ 1/3 & 1/20 & 9.87e $-5$ & 0.98 & 0 & * & 4.39e $-3$\\
+\ \ \ 1/3 & 1/5 & 2.1e $-3$ & 1.36 & 6.29e $-5$ & * & 0.01\\
+\bf{Color Stroop} &  &  &  &  &  & \\
+\ \ \ \bf{1/6} & \bf{1/10} & 1.05e $-74$ & 1.92e $-6$ & * & 0.04 & 0.12\\
+\ \ \ 1/12 & 1/20 & 1.29e $-74$ & 8.91e $-7$ & * & 0.03 & 0.05\\
+\ \ \ 1/12 & 1/5 & 1.42e $-74$ & 3.01e $-6$ & * & 0.04 & 0.16\\
+\ \ \ 1/3 & 1/20 & 7.34e $-75$ & 5.06e $-7$ & * & 0.03 & 0.01\\
+\ \ \ 1/3 & 1/5 & 1.06e $-74$ & 2.25e $-6$ & * & 0.04 & 0.05\\
+\bottomrule
+\addlinespace
+\end{tabular}
+\begin{tablenotes}[para]
+\textit{Note.} Sensitivity analysis of Bayes factor computation for all three data sets. Different settings of the scales on $\nu$ and $\epsilon$ represent a reasonable range of priors around the setting used for the main analysis (bold). The askerisks mark the winning model for each data set for the original analysis, and Bayes factors are computed for comparison to this model.
+\end{tablenotes}
+\end{threeparttable}
+\end{center}
+\end{table}
+
+Another concern, perhaps a more pressing concern in our view, is
+understanding the role and effects of the prior on inference. In
+general, Bayesian models require a careful choice of priors. These
+priors have an effects on inference as noted by many Bayesians. A
+general idea in research is that, if two researchers run the same
+experiment and obtain the same data, they should reach the same if not
+similar conclusions. Yet, the priors may be chosen differently by
+different researchers, and this choice may lead to differing
+conclusions. To harmonize Bayesian inference with the above starting
+point, many Bayesian analysts actively seek to minimize these effects by
+picking likelihoods, prior parametric forms, and heuristic methods of
+inference so that variation in prior settings have marginal effects
+(Aitkin, 1991; Gelman, Carlin, Stern, \& Rubin, 2004; Kruschke, 2012;
+Spiegelhalter, Best, Carlin, \& Linde, 2002). In contrast, Rouder et al.
+(2016) argue that the goal of analysis is to add value by searching for
+theoretically-meaningful structure in data. Vanpaemel (2010) and
+Vanpaemel \& Lee (2012) argue that the prior is where theoretically
+important constraint is encoded in the model. In our case, the prior
+provides the critical constraint on the relations among individuals. We
+think it is best to avoid judgments that Bayes factor model comparisons
+depend too little or too much on priors. They depend on it to the degree
+they do.
+
+Here we focus on understanding the dependence of Bayes factors on a
+reasonable range of prior settings and the resulting diversity of
+opinions. Indeed, Haaf \& Rouder (2017) took this tactic in
+understanding the diversity of results with all the models except for
+the spike-and-slab-model which was not developed at the time. Here we
+use a similar range of prior settings to understand the dependency on
+these settings.
+
+The critical prior settings for understanding the diversity of
+conclusions come from the priors on \(\nu\) and \(\epsilon_i\) (or
+\(g_\theta\)). Although they are not the primary target of inference,
+the prior settings on these parameters do affect Bayes factor results. A
+full discussion of the prior structures on these parameters is provided
+in Haaf \& Rouder (2017), and here we review the main issues. The
+critical settings are the \emph{scales} on \(\nu\) and \(\epsilon_i\),
+and these settings are relative to \(\sigma\), the residual noise. In
+tasks like this, with subsecond RTs, a standard deviation of repeated
+response times for a given participant and a given condition is about
+300 ms, and we can use this value to help set the scales. For example,
+for priming and Stroop tasks, we may expect an overall effect of 50ms,
+and the scale on \(\nu\) might be \(1/6\)th or \(50/300\). Likewise, if
+the take the variability of individuals' effects depicted by
+\(\epsilon_i\), we may expect this variation to be about 30 ms, or
+\(1/10\) of the residual noise. We explore the effects of halving and
+doubling these settings, which represents a reasonable range of
+variation.
+
+With these reasonable ranges of variation, we are ready to explore the
+effects of prior specification on Bayes factors. These are shown in
+Table \ref{tab:sensitivity-tab}. There is a fair amount of variability
+in Bayes factors, and in our opinion, there should be. The range of
+settings define quite different models with quite different predictions.
+Nonetheless, there is a fair amount of consistency. For the priming
+data, the common-effect model is preferred for all settings, with the
+null-model and the spike-and-slab models as the next contenders. For the
+color Stroop data, the positive-effects model is preferred for all
+settings, and the ordering for the remaining models stays relatively
+constant. The only data set where the preferred model varies with prior
+settings is the location Stroop data: The spike-and-slab model is
+preferred for the chosen settings and when the scale non \(\nu\) is
+halved. These settings indicate that small average effects are expected
+for all models. When the scale on \(\nu\) is doubled, i.e.~larger, about
+100ms effects are expected, the Bayes factor between the common-effect
+model and the spike-and-slab model is about 1, indicating that none of
+the two models is preferred over the other. This Bayes factor, however,
+was not extensively large from the beginning, only about 3-to-1 in favor
+of the spike-and-slab model. This example illustrates how useful this
+type of sensitivity analysis can be to understand the range of
+conclusions that may be drawn from the data. In this case, the evidence
+for the spike-and-slab model is small, and largely dependent on prior
+settings. For a convincind result, more evidence for a mixed-strategy
+account would is needed.
+
+\subsubsection{Computational Issues}\label{computational-issues}
+
+In previous work (Haaf \& Rouder, 2017; Thiele et al., 2017) we
+developed the null, common-effect, positive-effects and unconstrained
+models. Here we add the spike-and-slab model to the set and show it is a
+worthy competitor in at least one application. The former four models
+are computationally convenient, the Bayes factors can be computed quicky
+using a combination of Rouder et al.'s (2012) symobic integration as
+implemented in the BayesFactor package for R (Morey \& Rouder, 2015) and
+Klugkist and colleagues encompassing approach (e.g. Klugkist \&
+Hoijtink, 2007). Bayes factors for the spike-and-slab model, however,
+while conceptually similar, is computationally far more difficult in
+practice. The difficulty here is that Bayes factor computation is
+reliant on Marcov-chain-Montecarlo methods. We find that convergence in
+these methods is slow for the spike-and-slab model and hundreds of
+thousands of iterations are needed to approximate the Bayes factor. The
+good news here is that we can assess the accuracy of this approximation
+fairly readily through transitivity of Bayes factors.
+Figure~\ref{fig:result-fig}B/D/F illustrate this check. We can compute
+the Bayes factor between the unconstrained model and the null model
+either through the spike-and-slab model directly with symbolic
+integration methods. We find comparable results from both methods.
+
+Our computational difficulties illustrate that there is much work to be
+done. Although Bayes factors are convenient in standard cases with
+normal distributions, moving to the assessment of more custom-tailored
+models of psychological process remains timely and topical.
+
+\newpage
+
+\section{References}\label{references}
+
+\setlength{\parindent}{-0.5in} \setlength{\leftskip}{0.5in}
+
+\hypertarget{refs}{}
+\hypertarget{ref-Aitkin:1991}{}
+Aitkin, M. (1991). Posterior Bayes factors. \emph{Journal of the Royal
+Statistical Society. Series B (Methodological)}, \emph{53}(1), 111--142.
+Retrieved from \url{http://www.jstor.org/stable/2345730}
+
+\hypertarget{ref-R-papaja}{}
+Aust, F., \& Barth, M. (2017). \emph{papaja: Create APA manuscripts with
+R Markdown}. Retrieved from \url{https://github.com/crsh/papaja}
+
+\hypertarget{ref-R-Matrix}{}
+Bates, D., \& Maechler, M. (2017). \emph{Matrix: Sparse and dense matrix
+classes and methods}. Retrieved from
+\url{https://CRAN.R-project.org/package=Matrix}
+
+\hypertarget{ref-Bauer:Curran:2003}{}
+Bauer, D. J., \& Curran, P. J. (2003). Distributional assumptions of
+growth mixture models: Implications for overextraction of latent
+trajectory classes. \emph{Psychological Methods}, \emph{8}(3), 338.
+
+\hypertarget{ref-Brown:Heathcote:2008}{}
+Brown, S. D., \& Heathcote, A. (2008). The simplest complete model of
+choice reaction time: Linear ballistic accumulation. \emph{Cognitive
+Psychology}, \emph{57}, 153--178.
+
+\hypertarget{ref-Burbeck:Luce:1982}{}
+Burbeck, S. L., \& Luce, R. D. (1982). Evidence form auditory simple
+reaction times for both change and level detectors. \emph{Perception \&
+Psychophysics}, \emph{32}, 117--133.
+
+\hypertarget{ref-R-gmm}{}
+Chaussé, P. (2010). Computing generalized method of moments and
+generalized empirical likelihood with R. \emph{Journal of Statistical
+Software}, \emph{34}(11), 1--35. Retrieved from
+\url{http://www.jstatsoft.org/v34/i11/}
+
+\hypertarget{ref-Dagenbach:etal:1989}{}
+Dagenbach, D., Carr, T., \& Wilhelmsen, A. (1989). Task-induced
+strategies and near-threshold priming: Conscious influences on
+unconscious perception. \emph{Journal of Memory and Language},
+\emph{28}, 412--443.
+
+\hypertarget{ref-Davis:etal:2017}{}
+Davis-Stober, C., Dana, J., \& Rouder, J. (2017). When are sample means
+meaningful? The role of modern estimation in psychological science.
+\emph{Open Science Framework. April}, \emph{12}.
+
+\hypertarget{ref-R-spatialfil}{}
+Dinapoli, N., \& Gatta, R. (2015). \emph{Spatialfil: Application of 2D
+convolution kernel filters to matrices or 3D arrays}. Retrieved from
+\url{https://CRAN.R-project.org/package=spatialfil}
+
+\hypertarget{ref-R-fields}{}
+Douglas Nychka, Reinhard Furrer, John Paige, \& Stephan Sain. (2015).
+Fields: Tools for spatial data. Boulder, CO, USA: University Corporation
+for Atmospheric Research.
+doi:\href{https://doi.org/10.5065/D6W957CT}{10.5065/D6W957CT}
+
+\hypertarget{ref-Efron:Morris:1977}{}
+Efron, B., \& Morris, C. (1977). Stein's paradox in statistics.
+\emph{Scientific American}, \emph{236}, 119--127.
+
+\hypertarget{ref-R-beeswarm}{}
+Eklund, A. (2016). \emph{Beeswarm: The bee swarm plot, an alternative to
+stripchart}. Retrieved from
+\url{https://CRAN.R-project.org/package=beeswarm}
+
+\hypertarget{ref-Eurythmics:1983}{}
+Eurythmics. (1983). Sweet dreams (are made of this). UK.
+
+\hypertarget{ref-Falmagne:1968}{}
+Falmagne, J.-C. (1968). Note on a simple fixed-point property of binary
+mixtures. \emph{British Journal of Mathematical and Statistical
+Psychology}, \emph{21}, 131--132.
+
+\hypertarget{ref-R-spam_a}{}
+Furrer, R., \& Sain, S. R. (2010). spam: A sparse matrix R package with
+emphasis on MCMC methods for Gaussian Markov random fields.
+\emph{Journal of Statistical Software}, \emph{36}(10), 1--25. Retrieved
+from \url{http://www.jstatsoft.org/v36/i10/}
+
+\hypertarget{ref-Gelfand:etal:1992}{}
+Gelfand, A. E., Smith, A. F. M., \& Lee, T.-M. (1992). Bayesian analysis
+of constrained parameter and truncated data problems using gibbs
+sampling. \emph{Journal of the American Statistical Association},
+\emph{87}(418), 523--532. Retrieved from
+\url{http://www.jstor.org/stable/2290286}
+
+\hypertarget{ref-Gelman:etal:2004}{}
+Gelman, A., Carlin, J. B., Stern, H. S., \& Rubin, D. B. (2004).
+\emph{Bayesian data analysis (2nd edition)}. London: Chapman; Hall.
+
+\hypertarget{ref-R-mvtnorm}{}
+Genz, A., \& Bretz, F. (2009). \emph{Computation of multivariate normal
+and t probabilities}. Heidelberg: Springer-Verlag.
+
+\hypertarget{ref-George:McCulloch:1993}{}
+George, E. I., \& McCulloch, R. E. (1993). Variable selection via Gibbs
+sampling. \emph{Journal of the American Statistical Association},
+\emph{88}, 881--889.
+
+\hypertarget{ref-R-spam_b}{}
+Gerber, F., \& Furrer, R. (2015). Pitfalls in the implementation of
+Bayesian hierarchical modeling of areal count data: An illustration
+using BYM and Leroux models. \emph{Journal of Statistical Software, Code
+Snippets}, \emph{63}(1), 1--32. Retrieved from
+\url{http://www.jstatsoft.org/v63/c01/}
+
+\hypertarget{ref-R-dotCall64_b}{}
+Gerber, F., Moesinger, K., \& Furrer, R. (2015). Extending R packages to
+support 64-bit compiled code: An illustration with spam64 and GIMMS
+NDVI3g data. \emph{Computer \& Geoscience}.
+
+\hypertarget{ref-R-dotCall64_a}{}
+Gerber, F., Moesinger, K., \& Furrer, R. (2016). dotCall64: An efficient
+interface to compiled C/C++ and Fortran code supporting long vectors.
+\emph{R Journal}.
+
+\hypertarget{ref-Haaf:Rouder:2017}{}
+Haaf, J. M., \& Rouder, J. N. (2017). \emph{Developing constraint in
+bayesian mixed models}.
+
+\hypertarget{ref-Houpt:Fific:2017}{}
+Houpt, W., J., \& Fific, M. (2017). \emph{A hierarchical bayesian
+approach to distinguishing serial and parallel processing}.
+
+\hypertarget{ref-R-plotrix}{}
+J, L. (2006). Plotrix: A package in the red light district of r.
+\emph{R-News}, \emph{6}(4), 8--12.
+
+\hypertarget{ref-R-msm}{}
+Jackson, C. H. (2011). Multi-state models for panel data: The msm
+package for R. \emph{Journal of Statistical Software}, \emph{38}(8),
+1--29. Retrieved from \url{http://www.jstatsoft.org/v38/i08/}
+
+\hypertarget{ref-Jeffreys:1961}{}
+Jeffreys, H. (1961). \emph{Theory of probability (3rd edition)}. New
+York: Oxford University Press.
+
+\hypertarget{ref-Kass:Raftery:1995}{}
+Kass, R. E., \& Raftery, A. E. (1995). Bayes factors. \emph{Journal of
+the American Statistical Association}, \emph{90}, 773--795.
+
+\hypertarget{ref-Klauer:Kellen:2010}{}
+Klauer, K., \& Kellen, D. (2010). Toward a complete decision model of
+item and source recognition: A discrete-state approach.
+\emph{Psychonomic Bulletin \& Review}, \emph{17}(4), 465--478.
+
+\hypertarget{ref-Klugkist:Hoijtink:2007}{}
+Klugkist, I., \& Hoijtink, H. (2007). The Bayes factor for inequality
+and about equality constrained models. \emph{Computational Statistics \&
+Data Analysis}, \emph{51}(12), 6367--6379.
+
+\hypertarget{ref-Klugkist:etal:2005}{}
+Klugkist, I., Kato, B., \& Hoijtink, H. (2005). Bayesian model selection
+using encompassing priors. \emph{Statistica Neerlandica}, \emph{59},
+57--69.
+
+\hypertarget{ref-Kruschke:2012}{}
+Kruschke, J. K. (2012). Bayesian estimation supersedes the \(t\) test.
+\emph{Journal of Experimental Psychology: General}.
+
+\hypertarget{ref-Lee:2011}{}
+Lee, M. D. (2011). How cognitive modeling can benefit from hierarchical
+Bayesian models. \emph{Journal of Mathematical Psychology}, \emph{55},
+1--7.
+
+\hypertarget{ref-Lehmann:Casella:1998}{}
+Lehmann, E. L., \& Casella, G. (1998). \emph{Theory of point estimation,
+2nd edition}. New York: Springer.
+
+\hypertarget{ref-Little:etal:2011}{}
+Little, D. R., Nosofsky, R. M., \& Denton, S. (2011). Response time
+tests of logical-rule-based models of categorization. \emph{Journal of
+Experimental Psychology: Learning, Memory, and Cognition}, \emph{37},
+1--27.
+
+\hypertarget{ref-Logan:1988}{}
+Logan, G. D. (1988). Towards an instance theory of automization.
+\emph{Psychological Review}, \emph{95}, 492--527.
+
+\hypertarget{ref-Logan:1992}{}
+Logan, G. D. (1992). Shapes of reaction time distributions and shapes of
+learning curves: A test of the instance theory of automaticity.
+\emph{Journal of Experimental Psychology: Learning, Memory, and
+Cognition}, \emph{18}, 883--914.
+
+\hypertarget{ref-Luce:1986}{}
+Luce, R. D. (1986). \emph{Response times}. New York: Oxford University
+Press.
+
+\hypertarget{ref-R-MCMCpack}{}
+Martin, A. D., Quinn, K. M., \& Park, J. H. (2011). MCMCpack: Markov
+chain monte carlo in R. \emph{Journal of Statistical Software},
+\emph{42}(9), 22. Retrieved from \url{http://www.jstatsoft.org/v42/i09/}
+
+\hypertarget{ref-Mitchell:Beauchamp:1988}{}
+Mitchell, T. J., \& Beauchamp, J. J. (1988). Bayesian variable selection
+in linear regression. \emph{Journal of the American Statistical
+Assocation}, \emph{83}, 1023--1032.
+
+\hypertarget{ref-R-BayesFactor}{}
+Morey, R. D., \& Rouder, J. N. (2015). \emph{BayesFactor: Computation of
+bayes factors for common designs}. Retrieved from
+\url{https://CRAN.R-project.org/package=BayesFactor}
+
+\hypertarget{ref-Morey:etal:2016}{}
+Morey, R. D., Romeijn, J.-W., \& Rouder, J. N. (2016). The philosophy of
+Bayes factors and the quantification of statistical evidence.
+\emph{Journal of Mathematical Psychology}, --. Retrieved from
+\url{http://www.sciencedirect.com/science/article/pii/S0022249615000723}
+
+\hypertarget{ref-Morey:etal:2008a}{}
+Morey, R. D., Rouder, J. N., \& Speckman, P. L. (2008). A statistical
+model for discriminating between subliminal and near-liminal
+performance. \emph{Journal of Mathematical Psychology}, \emph{52},
+21--36.
+
+\hypertarget{ref-R-curl}{}
+Ooms, J. (2017). \emph{Curl: A modern and flexible web client for r}.
+Retrieved from \url{https://CRAN.R-project.org/package=curl}
+
+\hypertarget{ref-R-abind}{}
+Plate, T., \& Heiberger, R. (2016). \emph{Abind: Combine
+multidimensional arrays}. Retrieved from
+\url{https://CRAN.R-project.org/package=abind}
+
+\hypertarget{ref-R-coda}{}
+Plummer, M., Best, N., Cowles, K., \& Vines, K. (2006). CODA:
+Convergence diagnosis and output analysis for mcmc. \emph{R News},
+\emph{6}(1), 7--11. Retrieved from
+\url{https://journal.r-project.org/archive/}
+
+\hypertarget{ref-Pratte:Rouder:2009}{}
+Pratte, M. S., \& Rouder, J. N. (2009). A task-difficulty artifact in
+subliminal priming. \emph{Attention, Perception, \& Psychophysics},
+\emph{71}, 276--283.
+
+\hypertarget{ref-Pratte:etal:2010a}{}
+Pratte, M. S., Rouder, J. N., Morey, R. D., \& Feng, C. (2010).
+Exploring the differences in distributional properties between Stroop
+and Simon effects using delta plots. \emph{Attention, Perception \&
+Psychophysics}, \emph{72}, 2013--2025.
+
+\hypertarget{ref-Province:Rouder:2012}{}
+Province, J. M., \& Rouder, J. N. (2012). Evidence for discrete-state
+processing in recognition memory. \emph{Proceedings of the National
+Academy of Sciences}, \emph{109}(14357-14362).
+
+\hypertarget{ref-R-base}{}
+R Core Team. (2016). \emph{R: A language and environment for statistical
+computing}. Vienna, Austria: R Foundation for Statistical Computing.
+Retrieved from \url{https://www.R-project.org/}
+
+\hypertarget{ref-Ratcliff:1978}{}
+Ratcliff, R. (1978). A theory of memory retrieval. \emph{Psychological
+Review}, \emph{85}, 59--108.
+
+\hypertarget{ref-R-maps}{}
+Richard A. Becker, O. S. code by, Ray Brownrigg. Enhancements by Thomas
+P Minka, A. R. W. R. version by, \& Deckmyn., A. (2016). \emph{Maps:
+Draw geographical maps}. Retrieved from
+\url{https://CRAN.R-project.org/package=maps}
+
+\hypertarget{ref-Rickard:2004}{}
+Rickard, T. C. (2004). Strategy execution in cognitive skill learning:
+An item-level test of candidate models. \emph{Journal of Experimental
+Psychology: Learning, Memory, and Cognition}, \emph{30}, 65--82.
+
+\hypertarget{ref-Rouder:etal:2017}{}
+Rouder, H., J. N. (2017). \emph{From theories to models to predictions:
+A bayesian model comparison approach}.
+
+\hypertarget{ref-Rouder:Lu:2005}{}
+Rouder, J. N., \& Lu, J. (2005). An introduction to Bayesian
+hierarchical models with an application in the theory of signal
+detection. \emph{Psychonomic Bulletin and Review}, \emph{12}, 573--604.
+
+\hypertarget{ref-Rouder:Morey:2012}{}
+Rouder, J. N., \& Morey, R. D. (2012). Default Bayes factors for model
+selection in regression. \emph{Multivariate Behavioral Research},
+\emph{47}, 877--903. Retrieved from
+\url{http://dx.doi.org/10.1080/00273171.2012.734737}
+
+\hypertarget{ref-Rouder:etal:2008a}{}
+Rouder, J. N., Lu, J., Morey, R. D., Sun, D., \& Speckman, P. L. (2008).
+A hierarchical process dissociation model. \emph{Journal of Experimental
+Psychology: General}, \emph{137}, 370--389.
+
+\hypertarget{ref-Rouder:etal:2016b}{}
+Rouder, J. N., Morey, R. D., \& Wagenmakers, E.-J. (2016). The interplay
+between subjectivity, statistical practice, and psychological
+sciencecollabra. \emph{Collabra}, \emph{2}, 6. Retrieved from
+\url{http://doi.org/10.1525/collabra.28}
+
+\hypertarget{ref-Rouder:etal:2007b}{}
+Rouder, J. N., Morey, R. D., Speckman, P. L., \& Pratte, M. S. (2007).
+Detecting chance: A solution to the null sensitivity problem in
+subliminal priming. \emph{Psychonomic Bulletin and Review}, \emph{14},
+597--605.
+
+\hypertarget{ref-Rouder:etal:2012}{}
+Rouder, J. N., Morey, R. D., Speckman, P. L., \& Province, J. M. (2012).
+Default Bayes factors for ANOVA designs. \emph{Journal of Mathematical
+Psychology}, \emph{56}, 356--374. Retrieved from
+\url{http://dx.doi.org/10.1016/j.jmp.2012.08.001}
+
+\hypertarget{ref-Rouder:etal:2010d}{}
+Rouder, J. N., Yue, Y., Speckman, P. L., Pratte, M. S., \& Province, J.
+M. (2010). Gradual growth vs. shape invariance in perceptual decision
+making. \emph{Psychological Review}, \emph{117}, 1267--1274.
+
+\hypertarget{ref-Skrondal:Rabe-Hesketh:2004}{}
+Skrondal, A., \& Rabe-Hesketh, S. (2004). \emph{Generalized latent
+variable modeling: Multilevel, longitudinal, and structural equation
+models}. Boca Raton: CRC Press.
+
+\hypertarget{ref-R-diagram}{}
+Soetaert, K. (2014a). \emph{Diagram: Functions for visualising simple
+graphs (networks), plotting flow diagrams}. Retrieved from
+\url{https://CRAN.R-project.org/package=diagram}
+
+\hypertarget{ref-R-shape}{}
+Soetaert, K. (2014b). \emph{Shape: Functions for plotting graphical
+shapes, colors}. Retrieved from
+\url{https://CRAN.R-project.org/package=shape}
+
+\hypertarget{ref-Spiegelhalter:etal:2002}{}
+Spiegelhalter, D. J., Best, N. G., Carlin, B. P., \& Linde, A. van der.
+(2002). Bayesian measures of model complexity and fit (with discussion).
+\emph{Journal of the Royal Statistical Society, Series B (Statistical
+Methodology)}, \emph{64}, 583--639.
+
+\hypertarget{ref-R-colorspace_b}{}
+Stauffer, R., Mayr, G. J., Dabernig, M., \& Zeileis, A. (2009).
+Somewhere over the rainbow: How to make effective use of colors in
+meteorological visualizations. \emph{Bulletin of the American
+Meteorological Society}, \emph{96}(2), 203--216.
+doi:\href{https://doi.org/10.1175/BAMS-D-13-00155.1}{10.1175/BAMS-D-13-00155.1}
+
+\hypertarget{ref-Thiele:etal:2017}{}
+Thiele, J. E., Haaf, J. M., \& Rouder, J. N. (2017). \emph{Bayesian
+analysis for systems factorial technology}.
+
+\hypertarget{ref-VanZandt:2000}{}
+Van Zandt, T. (2000). How to fit a response time distribution.
+\emph{Psychonomic Bulletin and Review}, \emph{7}, 424--465.
+
+\hypertarget{ref-Vanpaemel:2010}{}
+Vanpaemel, W. (2010). Prior sensitivity in theory testing: An apologia
+for the Bayes factor. \emph{Journal of Mathematical Psychology},
+\emph{54}, 491--498.
+
+\hypertarget{ref-Vanpaemel:Lee:2012}{}
+Vanpaemel, W., \& Lee, M. D. (2012). Using priors to formalize theory:
+Optimal attention and the generalized context model. \emph{Psychonomic
+Bulletin \& Review}, \emph{19}, 1047--1056.
+
+\hypertarget{ref-R-MASS}{}
+Venables, W. N., \& Ripley, B. D. (2002). \emph{Modern applied
+statistics with s} (Fourth.). New York: Springer. Retrieved from
+\url{http://www.stats.ox.ac.uk/pub/MASS4}
+
+\hypertarget{ref-Wagenmakers:Brown:2007}{}
+Wagenmakers, E. J., \& Brown, S. (2007). On the linear relation between
+the mean and the standard deviation of a response time distribution.
+\emph{Psychological Review}, \emph{114}, 830--841.
+
+\hypertarget{ref-Wenger:Gibson:2004}{}
+Wenger, M. J., \& Gibson, B. S. (2004). Assing hazard functions to
+assess changes in processing capacity in an attentional cuing paradigm.
+\emph{Journal of Experimental Psychology: Human Perception and
+Performance}, \emph{30}, 708--719.
+
+\hypertarget{ref-R-devtools}{}
+Wickham, H., \& Chang, W. (2016). \emph{Devtools: Tools to make
+developing r packages easier}. Retrieved from
+\url{https://CRAN.R-project.org/package=devtools}
+
+\hypertarget{ref-R-tmvtnorm}{}
+Wilhelm, S., \& G, M. B. (2015). \emph{tmvtnorm: Truncated multivariate
+normal and student t distribution}. Retrieved from
+\url{http://CRAN.R-project.org/package=tmvtnorm}
+
+\hypertarget{ref-Yantis:etal:1991}{}
+Yantis, S., Meyer, D. E., \& Smith, J. E. K. (1991). Anaylsis of
+multinomial mixture distributions: New tests for stochastic models of
+cognitive action. \emph{Psychological Bulletin}, \emph{110}, 350--374.
+
+\hypertarget{ref-R-sandwich_a}{}
+Zeileis, A. (2004). Econometric computing with hc and hac covariance
+matrix estimators. \emph{Journal of Statistical Software},
+\emph{11}(10), 1--17. Retrieved from
+\url{http://www.jstatsoft.org/v11/i10/}
+
+\hypertarget{ref-R-sandwich_b}{}
+Zeileis, A. (2006). Object-oriented computation of sandwich estimators.
+\emph{Journal of Statistical Software}, \emph{16}(9), 1--16. Retrieved
+from \url{http://www.jstatsoft.org/v16/i09/.}
+
+\hypertarget{ref-R-colorspace_a}{}
+Zeileis, A., Hornik, K., \& Murrell, P. (2009). Escaping RGBland:
+Selecting colors for statistical graphics. \emph{Computational
+Statistics \& Data Analysis}, \emph{53}(9), 3259--3270.
+doi:\href{https://doi.org/10.1016/j.csda.2008.11.033}{10.1016/j.csda.2008.11.033}
+
+\hypertarget{ref-Zellner:Siow:1980}{}
+Zellner, A., \& Siow, A. (1980). Posterior odds ratios for selected
+regression hypotheses. In J. M. Bernardo, M. H. DeGroot, D. V. Lindley,
+\& A. F. M. Smith (Eds.), \emph{Bayesian statistics: Proceedings of the
+First International Meeting held in Valencia (Spain)} (pp. 585--603).
+University of Valencia.
+
+
+
+
+
+
+\end{document}
