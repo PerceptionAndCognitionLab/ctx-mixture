@@ -1,0 +1,80 @@
+<!-- #Application -->
+
+We apply the five models to three different data sets: A priming data set provided by @Pratte:Rouder:2009, and two Stroop experiments provided by @Pratte:etal:2010a. The goal here is to answer the question whether some participants show an effect while others do not. We provide estimation and model comparison results for the three data sets and discuss them in the light of the experimental paradigms.[^r]
+
+```{r data, warning= FALSE, message= FALSE}
+SourceURL <- "https://raw.githubusercontent.com/PerceptionCognitionLab/data0/master/contexteffects/StroopSimonAPP2010/cleaning.R"
+source_url(SourceURL)
+
+sourceDat <- "https://raw.githubusercontent.com/PerceptionCognitionLab/data0/master/contexteffects/numberSubPriming/numberSubPriming.R"
+source_url(sourceDat)
+```
+
+```{r analysis, child="analysis.Rmd"}
+```
+
+[^r]: All analyses were conducted using `r my_citation`.
+
+##Priming Data Set
+
+The priming data used here, reported by @Pratte:Rouder:2009, comes from a number priming task where the primes are flashed briefly before the target stimulus is presented.[^subprim] From our experience with these tasks we suspect the spike-and-slab model to perform well with some participants being affected by briefly presented primes and others not being affected. 
+
+In the task, numbers were presented as primes, followed by target digits that had to be classified as greater or less than five. There is a critical congruent and incongruent condition: The congruent condition is when the prime and the target are both on the same side of five, e.g. the prime is three and the target is four; the incongruent condition is when the prime and the target are opposite, e.g. the prime is eight and the target is four. The priming effect refers to the speed-up in responding to the target in the congruent versus the incongruent condition. Prime presentation was brief by design, and the goal was to bring it near the threshold of detection. Yet, it is well known that this threshold varies considerably across people. For example, @Morey:etal:2008a report high variability in individual threshold estimates for prime perception. Other researchers use adaptive methods to change presentation duration individually for each participant until identification of primes is on chance [e.g. @Dagenbach:etal:1989]. For any given presentation duration, some individuals may be able to detect the prime and others may not. This difference may lead to variability in processing with some people processing the primes and others not.
+
+[^subprim]: We analyze the data from Pratte and Rouder's Experiment 2. In the original experiment, primes were shown for durations of 16, 18, or 20 ms. We combined data from the 16 and 18 ms conditions and disregarded the difference in duration for this analysis. There were no apparent differences in individuals' effects across the included conditions. 
+
+###Results
+
+```{r}
+post.eff <- colMeans(subprim.chainout$theta[subprim.chainout$keep,] * subprim.chainout$z[subprim.chainout$keep,])
+
+post.prob <- colMeans(subprim.chainout$z[subprim.chainout$keep,])
+```
+
+Figure\ \@ref(fig:result-fig)A provides two sets of parameter-estimation results. The first set, denoted by the crosses that span from `r range(effect)[1]` seconds to `r range(effect)[2]` seconds, are the observed effects for the individuals, and these are the same points that are plotted in Figure\ \@ref(fig:classification). Observed effects in this context are the differences in individuals' sample means for the incongruent and congruent conditions. Crosses are colored red or gray to indicate whether the observed effects are negative or positive, respectively. Overall, effects are relatively constrained with no participant having more than a `r round(range(effect)[2] * 1000)` millisecond effect in absolute value. Estimates from the hierarchical estimation model are shown in blue circles. These estimates are posterior means of $\theta_i$ where the averaging is across the spike and slab components. The posterior weights of being in the slab are denoted by the shading of the points with lighter shading corresponding to greater weights. The 95% credible intervals, again across the spike and slab components, are shown by the shaded region.
+
+We focus on the contrast between the sample effects and the model effect estimates. Although the sample effects subtend a small range of about 50 ms, the model-based estimates subtend a much smaller range from almost no effect to an `r round(range(post.eff)[2] * 1000)` ms effect. These hierarchical estimates reflect the range of true variation after sample noise is accounted for. The compression is known as regularization or shrinkage, and prevents the analyst from overstating evidence for heterogeneity. Hierarchical regularization is an integral part of modern inference [@Efron:Morris:1977; @Lehmann:Casella:1998], and should always be used wherever possible [@Davis:etal:2017]. The individuals' posterior probability of being in the slab ranges from `r round(range(post.prob)[1], 2)` to `r round(range(post.prob)[2], 2)`.
+
+From the model estimates, it is evident that individual effects are tightly clustered and slightly positive with a mean of `r round(mean(post.eff) * 1000)` ms. Yet, these results are not sufficient to answer the question whether "some do and some don't". It is unclear whether everyone has a small effect or some people have no effect while others have a slightly larger one. To answer this question we analyse the above models and compare them with Bayes factors. The results are shown in Figure\ \@ref(fig:result-fig)B. The common-effect model is preferred, indicating that everyone has a single, common effect. The next most parsimonious model is the null model, where all individuals have no effect, and it predicts the data about `r round(subprim.bfs$bf1pf/(subprim.bfs$bf0f), 1)` times worse than the common-effect model. The Bayes factor between the spike-and-slab model and the common-effect model is `r round(subprim.bfs$bf1pf/(subprim.bfs$bfpss/subprim.bfs$bffs))`-to-1 in favor of the common-effect model. We take this Bayes factor as evidence that all do: Everybody has a small priming effect.
+
+##A location Stroop experiment
+
+@Pratte:etal:2010a ran a series of Stroop and Simon interference experiments to assess distributional correlates of these inference effects. As part of their investigations they constructed stimuli that could be used in either task, and with this goal, they presented the words "LEFT" and "RIGHT" to either the left or right side of the screen.  In the Stroop tasks, participants identified the location; in the Simon task, they identified the meaning.
+
+In their first attempt to use these stimuli, @Pratte:etal:2010a found a 12 ms average Stroop effect. This effect is rather small compared to known Stroop effects, and was too small for a distributional analysis. To Pratte et al., the experiment was a failure. At the time, Pratte et al. speculated that participants did not need to read the word to assess the location.  They could respond without even moving their eyes from fixation, and even though reading might be automatic at fixation, it may not be in the periphery.  To encourage participants to read the word, Pratte et al. subsequently added a few catch trials.  On these catch trials, the word "STOP" was displayed as the stimulus to the left or right of fixation, and participants had to withhold their response. This manipulation resulted in much larger Stroop effects.
+
+Here we analyze data from the failed experiment where there was a small Stroop effect of 12 ms [Experiment 2 from @Pratte:etal:2010a].  Our question is whether some participants shift their attention to the word in the periphery while others do not.  In this scenario, we would find that some do and some don't.  The alternative is that all participants exhibited a small Stroop effect similar to the priming effect above.
+
+```{r dat-stroop-1}
+used.dat <- table(dat.stroop.p1$cond)
+```
+
+###Results
+
+```{r}
+post.eff <- colMeans(stroop2.chainout$theta[stroop2.chainout$keep,] * stroop2.chainout$z[stroop2.chainout$keep,])
+
+post.prob <- colMeans(stroop2.chainout$z[stroop2.chainout$keep,])
+```
+
+Observed effects are shown by the crosses in Figure\ \@ref(fig:result-fig)C. Of the `r length(effect.3)` participants, `r sum(effect.3<0)` show an observed negative Stroop effect, shown by red crosses in the figure. The average effect is `r mean(effect.3) * 1000` ms with individuals' effects ranging from `r round(range(effect.3)[1] * 1000)` ms to `r round(range(effect.3)[2] * 1000)` ms.
+
+Estimates from the hierarchical estimation model are shown in blue circles, and 95% credible intervals are shown by the shaded region. Again, hierarchical shrinkage is large, reducing the range from `r round(diff(range(effect.3)) * 1000)` ms for observed effects to `r round(diff(range(post.eff)) * 1000)` ms for the model estimates. Of note is also that the individuals' posterior probability of being in the slab varies considerably, ranging from `r round(range(post.prob)[1], 2)` to `r round(range(post.prob)[2], 2)`. This difference in posterior weight suggests that some individuals are better described by the spike while others are almost definitively in the slab.
+
+The model comparison results in Figure\ \@ref(fig:result-fig)D confirm this consideration: the Bayes factor between the spike-and-slab model and the runner-up common-effect model is `r round(stroop2.bfs$bfpss/stroop2.bfs$bffs/stroop2.bfs$bf1pf, 1)`-to-1 in favor of the spike-and-slab model. This Bayes factor provides slight evidence for the "some do and some don't" wisdom in this particular Stroop experiment.
+
+## A color Stroop experiment
+
+@Pratte:etal:2010a ran another experiment, a more standard Stroop task with color terms [Experiment 1 from @Pratte:etal:2010a]. For this experiment, in contrast to the failed Stroop experiment, we expected that everyone shows a positive Stroop effect.
+
+### Results
+
+```{r}
+post.eff <- colMeans(stroop1.chainout$theta[stroop1.chainout$keep,] * stroop1.chainout$z[stroop1.chainout$keep,])
+
+post.prob <- colMeans(stroop1.chainout$z[stroop1.chainout$keep,])
+```
+
+Parameter estimates are shown in Figure\ \@ref(fig:result-fig)E. Individuals' observed effects are fairly large with an average of `r round(mean(effect.2) * 1000)` ms with only one participant showing an observed negative effect. There is less shrinkage than for the other data sets. The range for the observed effects is `r round(diff(range(effect.2)) * 1000)` ms; the range for the hierarchical estimates is `r round(diff(range(post.eff)) * 1000)` ms. Posterior probabilities of being in the slab are high with only one person having a lower probability than .85.
+
+The model comparison results are shown in Figure\ \@ref(fig:result-fig)F. Overall, there is most evidence for the positive-effects model. The second-best model is the unconstrained model. The Bayes factor between these two models is `r round(stroop1.bfs$bfpf)`-to-1 in favor of the positive-effects model, and this Bayes factor can be interpreted as evidence that all do. The spike-and-slab model fares even worse with a Bayes factor of 1-to-`r round(stroop1.bfs$bfpf * stroop1.bfs$bffs/stroop1.bfs$bfpss)` compared to the positive-effects model. The results suggest that everyone shows the expected Stroop effect --- if targets are presented at fixation.

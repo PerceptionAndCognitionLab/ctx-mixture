@@ -1,0 +1,507 @@
+---
+title             : "Some do and some don't? Accounting for variability of individual difference structures."
+shorttitle        : "Variability of individual difference structures."
+
+author:
+  - name          : "Julia M. Haaf"
+    affiliation   : "1"
+    corresponding : yes
+    address       : "205 McAlester Hall"
+    email         : "JHaaf@mail.missouri.edu"
+  - name          : "Jeffrey N. Rouder"
+    affiliation   : "1, 2"
+
+affiliation:
+  - id            : "1"
+    institution   : "University of Missouri"
+  - id            : "2"
+    institution   : "University of California, Irvine"
+
+author_note: >
+  This paper was written in R-Markdown with code for data analysis integrated into the text.  The Markdown script is open and freely available at [https://github.com/PerceptionAndCognitionLab/ctx-mixture](https://github.com/PerceptionAndCognitionLab/ctx-mixture). The data used here are not original.  We make these freely available with permission of the original authors at [https://github.com/PerceptionCognitionLab/data0/tree/master/contexteffects](https://github.com/PerceptionCognitionLab/data0/tree/master/contexteffects).
+
+abstract: >
+  A prevailing notion in experimental psychology is that individuals' performance in a task varies gradually in a continuous fashion. In a Stroop task, for example, the true average effect may be 50ms with a standard deviation of say 30ms. In this case, some individuals will have greater effects than 50ms, some will have smaller, and some are forecasted to have negative effects in sign----they respond faster to incongruent items than to congruent ones!  But are there people who have a true negative effect in Stroop or any other task?  We highlight three *qualitatively different* effects: negative effects, null effects, and positive effects.  The main goal of this paper is to develop models that allow researchers to explore whether all three are present in a task: Do all individuals show a positive effect? Are there individuals with truly no effect?  Are there any individuals with negative effects?  We develop a family of Bayesian hierarchical models that capture a variety of these constraints. We apply this approach to Stroop interference experiments and a near-liminal priming experiment where the prime may be below and above threshold for different people.  We show that most tasks people are quite alike---for example everyone has positive Stroop effects and nobody fails to Stroop or Stroops negatively.  We also show a case that under very specific circumstances,  we could entice some people to not Stroop at all.
+
+keywords          : "Cognitive psychometrics, Individual differences, Bayes factors, Mixture models"
+
+bibliography      : ["r-references.bib", lab.bib]
+
+figsintext        : no
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+lineno            : no
+
+lang              : "english"
+class             : man
+header-includes:
+   - \usepackage{bm}
+   - \usepackage{pcl}
+   - \usepackage{amsmath}
+   - \usepackage{setspace}
+   - \usepackage{bm}
+output            : papaja::apa6_pdf
+csl               : apa6.csl
+---
+
+```{r include = FALSE}
+library("papaja")
+library("spatialfil")
+library("tmvtnorm")
+library("msm")
+library(curl)
+library(devtools)
+library(BayesFactor)
+library("MCMCpack")
+library("diagram")
+library("plotrix")
+library("colorspace")
+library("mvtnorm")
+library("gridBase")
+library("ggplot2")
+library("grid")
+library("RColorBrewer")
+library("reshape2")
+
+# SourceURL <- "https://raw.githubusercontent.com/PerceptionAndCognitionLab/ctx-indiff/public/shared/functions/modelcomp.R"
+# source_url(SourceURL)
+my_citation <- cite_r(file = "r-references.bib")
+
+source("../../shared/modelcomp.R")
+source("../../shared/figHelp.R")
+
+chains = T
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+```{r classification, fig.cap = "Individual observed effects from a priming task ordered from lowest to highest. Shading of the points indicates the direction of the effect according to two criteria. Dark blue points indicate a positive priming effect for the criterion of BF>2. Light or dark blue points indicate a positive priming effect for the criterion of 80%CIs excluding zero. White points indicate a null effect according to both criteria."}
+sourceDat <- "https://raw.githubusercontent.com/PerceptionCognitionLab/data0/master/contexteffects/numberSubPriming/numberSubPriming.R"
+source_url(sourceDat)
+
+make.cis <- function(dat){
+    rts <- split(dat$rt, dat$cond)
+    t <- t.test(rts$`0`, rts$`1`, conf.level = 0.8)
+    bf <- ttestBF(x = rts$`0`, y = rts$`1`, nullInterval = c(0, Inf))
+    c((t$estimat[1]-t$estimat[2]), t$conf.int[1:2], extractBF(bf)[1,1])
+}
+
+datclean$condn <- 1 - datclean$cond
+I <- length(unique(datclean$sub))
+sub <- as.factor(datclean$sub)
+levels(sub) <- 1:I
+
+datclean$condn <- factor(datclean$condn, labels = c("c","i"))
+delta <- matrix(unlist(by(datclean, sub, make.cis, simplify = TRUE))
+                , ncol = 4, byrow = T)
+
+delta_i <- delta[order(delta[, 1]),]
+
+par(mfrow = c(1,1), mar=c(4,4.5,1,1), mgp = c(2.2,1,0))
+  #PLOT DELTA WITH REJECTED NULL
+  plot(x = 1: nrow(delta_i)
+       , y = delta_i[, 1]
+       , ylim = c(min(delta_i[, 2]), max(delta_i[, 3]))
+       # , pch = 19
+       , col = "gray40"
+       , ylab = expression(paste("Observed effect ", d[i], " (sec)"))
+       , xlab = "Participants"
+       , frame.plot = FALSE
+       , axes = FALSE
+  )
+abline(h = 0, col = "gray60", lwd = 1.5)
+  
+plotCI(x = 1: nrow(delta_i)
+       , y = delta_i[, 1]
+       , ui= delta_i[, 3]
+       , li= delta_i[, 2]
+       , add = TRUE
+       # , sfrac = 1/150
+       # , pch = 19
+       , col = "gray40"
+       , pch = 21
+       , pt.bg=par("bg")
+       , cex = 1.2)
+
+points(x = 1: nrow(delta_i)
+       , y = delta_i[, 1]
+       , pch = 19
+       , col = "white")
+
+axis(side = 1
+     , at = c(1, nrow(delta_i)))
+axis(side = 2
+    , at = seq(-.05, .05, .025))
+
+ind <- delta_i[, 2] > 0
+goodCI <- delta_i[ind,]
+points(x = (1:I)[ind]
+       , y <- goodCI[, 1]
+       , pch = 19
+       , col = "cornflowerblue")
+
+ind2 <- delta_i[, 4] > 1
+goodBF <- delta_i[ind2, ]
+points(x = (1:I)[ind2]
+       , y = goodBF[, 1]
+       , pch = 19
+       , col = "navy")
+
+points(x = 1: nrow(delta_i)
+       , y = delta_i[, 1]
+       , col = "gray40")
+```
+
+```{r child = "chapters/newIntro.Rmd"}
+```
+
+```{r simple-model-fig, fig.cap="Models capturing different configurations of individual differences in true effects. A./B. A null model and a common-effect model without individual variation. C. A model with individual variability where all effects are positive. D. A model here some individuals have no effect and others have a positive effect. E. A model where some individuals have no effect and others have a positive effect, and again others have a negative effect. F. Common random-effects model that captures the case where individuals come from a graded, continuous distribution."}
+par(mar=c(3,1,3,.5), mgp = c(2,1,0), xpd = F)
+lay <- matrix(1:6, nrow = 2, byrow = T)
+layout(lay)
+
+x <- seq(-8, 8, .1)
+
+#Null
+plot(x, y = rep(1,length(x)), pch = NA, axes = F
+     , ylab = "Strategy-pure", xlab = "", ylim = c(0, 1))
+axis(1, at = c(-6, 0, 6), labels = c("-", 0, "+"))
+abline(v = 0, lty = "dashed", col = "gray")
+Arrows(x0 = 0, x1 = 0, y0 = 0, y1 = .9
+       , arr.type = "triangle", lwd = 2, arr.length = .3)
+mtext("A.", line = .5)
+# mtext("Not Crossing", side = 2, line = -.5, cex = .8)
+# mtext("Crossing", side = 2, line = -.5, adj = -1.9, cex = .8)
+
+
+#Common
+plot(x, y = rep(1,length(x)), pch = NA, axes = F
+     , ylab = "", xlab = "", ylim = c(0, 1))
+axis(1, at = c(-6, 0, 6), labels = c("-", 0, "+"))
+abline(v = 0, lty = "dashed", col = "gray")
+Arrows(x0 = 2, x1 = 2, y0 = 0, y1 = .9
+       , arr.type = "triangle", lwd = 2, arr.length = .3)
+mtext("B.", line = .5)
+
+#Positive
+plot(x, y = rep(1,length(x)), pch = NA, axes = F
+     , ylab = "", xlab = "", ylim = c(0, 1))
+axis(1, at = c(-6, 0, 6), labels = c("-", 0, "+"))
+abline(v = 0, lty = "dashed", col = "gray")
+lines(x, 1.1 * dgamma(x, shape =2), type = "l", lwd = 2)
+mtext("C.", line = .5)
+
+#SS
+plot(x, y = rep(1,length(x)), pch = NA, axes = F
+     , ylab = "Strategy-mixed", xlab = "", ylim = c(0, 1))
+axis(1, at = c(-6, 0, 6), labels = c("-", 0, "+"))
+abline(v = 0, lty = "dashed", col = "gray")
+Arrows(x0 = 0, x1 = 0, y0 = 0, y1 = .7
+       , arr.type = "triangle", lwd = 2, arr.length = .3)
+lines(x, dgamma(x, shape =2) * .7, type = "l", lwd = 2)
+mtext("D.", line = .5)
+
+#Two slab one spike
+plot(x, y = rep(1,length(x)), pch = NA, axes = F
+     , ylab = "Strategy-mixed", xlab = "", ylim = c(0, 1))
+axis(1, at = c(-6, 0, 6), labels = c("-", 0, "+"))
+abline(v = 0, lty = "dashed", col = "gray")
+Arrows(x0 = 0, x1 = 0, y0 = 0, y1 = .5
+       , arr.type = "triangle", lwd = 2, arr.length = .3)
+lines(x, dgamma(x, shape =2) * .45, type = "l", lwd = 2)
+lines(x, rev(dgamma(x, shape =2)) * .45, type = "l", lwd = 2)
+mtext("E.", line = .5)
+
+#Normal
+plot(x, y = rep(1,length(x)), pch = NA, axes = F
+     , ylab = "", xlab = "", ylim = c(0, 1))
+abline(v = 0, lty = "dashed", col = "gray")
+axis(1, at = c(-6, 0, 6), labels = c("-", 0, "+"))
+lines(x, dnorm(x, sd = 1.5), type = "l", lwd = 2)
+mtext("F.", line = .5)
+```
+
+# Models of constraints
+
+```{r model-predictions, child="figures/figModPred.Rmd", cache = T}
+```
+
+The tasks we consider here have two conditions that can be termed *compatible* and *incompatible*, or more generally, *control* and *treatment*. It is most convenient to discuss the models in random-variable notation. We start with a basic linear regression model. Let $Y_{ijk}$ denote the response time (RT) for the $i$th participant, $i = 1, \ldots, I$, in the $j$th condition, $j = 1, 2$, and the $k$th trial, $k = 1, \ldots, K_{ij}$.[^1] The linear regression model is
+
+\begin{equation}\label{basemodel}
+Y_{ijk} \sim \mbox{Normal}(\alpha_i + x_j\theta_i, \sigma^2).
+\end{equation}
+
+Here, $\alpha_i$ is each individual's true intercept and $\theta_i$ is each individual's true effect. The term $x_j$ is an indicator for the condition, which is zero for compatible trials and one for incompatible trials. The parameter $\sigma^2$ is the variance of repeated trials within a cell. The critical parameters in the model are the true individuals' effects, $\theta_i$. Placing constraints on these *true* effect parameters results in the models depicted in Figure\ \@ref(fig:simple-model-fig).
+
+###Null Model
+
+The null model is denoted as $\calM_0$ and specifies a true effect of zero for all individuals:
+
+\[
+  \begin{array}{llr}
+\calM_0: && \theta_i = 0.\\
+\end{array}
+\]
+
+This null model is more constraining than the usual null where the average across individuals is zero. Here, in contrast, each individual truly has no effect. An illustration of the model is shown in the first panel in  Figure\ \@ref(fig:modelfig). The figure illustrates the dimensionality of the models for two participants, and it is a guide useful for the following models. Shown are two hypothetical participants' true effects, $\theta_1$ and $\theta_2$, shown in the figure. For the null model, $\theta_1$ and $\theta_2$ have to be exactly zero. As a result, the density of the distribution of $\theta_i$ is a spike at zero, corresponding to the dark point at zero in the figure. The model also corresponds to Figure\ \@ref(fig:simple-model-fig)A.
+
+###Common-effect Model
+
+The common-effect model, denoted $\calM_1$, corresponds to the spike in Figure\ \@ref(fig:simple-model-fig)B, and it is less constrained than the null. Individuals share a common effect with no individual variability,
+
+\[
+  \begin{array}{llr}
+\calM_1: && \theta_i = \nu^+,\\
+\end{array}
+\]
+
+where $\nu^+$ denotes a constant, positive effect. The first panel in the second row of Figure\ \@ref(fig:modelfig) shows that both $\theta_1$ and $\theta_2$ are restricted to the diagonal line, depicting that individual participants' effects have to be equal. The diagonal is restricted to be positive to ensure that the model only accounts for effects in the expected direction. Every individual has the exact same true effect, but this effect is only restricted to be positive, not fixed to a specific value. The diagonal line results from this *a priori* uncertainty about the size of the effect.
+
+###Positive-Effects Model
+
+The positive-effects model is denoted $\calM_+$, and it is the first model that introduces true individual variability. True individuals' effects may vary, they are, however, constrained to be positive:
+
+\[
+  \begin{array}{llr}
+\calM_+: && \theta_i \sim \mbox{Normal}^+(\nu, g_\theta \sigma^2),\\
+\end{array}
+\]
+
+where $\mbox{Normal}^+$ refers to a normal distribution truncated below at zero, $\nu$ is the mean parameter for this distribution and $g_\theta \sigma^2$ is the variance term. The model is illustrated in the first panel of the third row of Figure\ \@ref(fig:modelfig).[^2] Both $\theta_1$ and $\theta_2$ are restricted to be positive, but can be different. Values closer to zero are more plausible. The model roughly corresponds to Figure\ \@ref(fig:simple-model-fig)C. In both cases, the distribution on $\theta_i$ is restricted to positive values. Yet, the shape in the figure is different from the one for the positive-effects model specified here.
+
+###Spike-and-slab model
+
+The spike-and-slab model is denoted $\calM_{SS}$. Here, the distribution on $\theta_i$ consists of two components, the spike and the slab. Whether an individual's effect is truly in the slab or in the spike is indicated by the parameter $z_i$. If an effect is truly null, $z_i = 0$; if an effect is truly positive $z_i = 1$. The distribution of $\theta_i$ conditional on $z_i$ is
+
+\begin{align*}
+\calM_{SS}:
+\qquad
+\begin{array}{l}
+\theta_i | (z_i = 1) \sim \mbox{Normal}^+(\nu, g_\theta \sigma^2),\\
+\theta_i | (z_i = 0) = 0,
+\end{array}
+\end{align*}
+
+Here, the spike corresponds to the null model and the slab corresponds to the positive-effects model. In model specification, every individual has some probability of being in the spike and a complementary probability of being in the slab. The first panel in the fourth row of Figure\ \@ref(fig:modelfig) shows the model specifications for two participants. For these hypothetical individuals, four combinations of true effects are plausible: 1. Both individuals are in the spike. In this case, $\theta_1$ and $\theta_2$ have to be zero, indicated in the figure by the dark point at (0,0). 2. Both participants are in the slab. $\theta_1$ and $\theta_2$ can take on any positive value, restricting the true effects to the upper right quadrant in the figure., just as with the positive-effects model. 3. $\theta_1$ is in the slab and $\theta_2$ is zero. This case is represented by positive $\theta_1$ values on the horizontal line at $y = 0$. 4. $\theta_2$ is in the slab and $\theta_1$ is zero. This case is represented by positive $\theta_2$ values on the vertical line at $x = 0$.
+
+###Unconstrained Model
+
+The unconstrained model, denoted $\calM_u$, is the random-effects model in Figure\ \@ref(fig:simple-model-fig)F. Here, a normal distribution without any constraint is placed on the individual's true effects:
+
+\[
+  \begin{array}{llr}
+\calM_u: && \theta_i \sim \mbox{Normal}(\nu, g_\theta \sigma^2).\\
+\end{array}
+\]
+
+The first panel in the last row of Figure\ \@ref(fig:modelfig) shows these model specifications. True individuals' effects can take on any values, and values closer to zero are more plausible. With this model, there is no explicit way of taking differences in the sign of the effect into account. The model serves as a none-of-the-above option capturing when some individuals' effects are truly negative.
+
+
+## Prior specifications and hierarchical constraints
+
+The five models are analyzed in a Bayesian framework. Bayesian analysis requires a careful specification of prior distributions on parameters. These priors are needed for parameters $\alpha_i$, the individual intercepts; $\sigma^2$, the variance of responses in each participant-by-condition cell; the collection of $z_i$, each individual's indicator of being in the spike or the slab; $\nu$, the mean of effects; and $g_\theta$, the variance of effects in effect-size units. The priors parameters that are common to all models are not of particular concern. They do not affect model comparison, and we follow @Haaf:Rouder:2017 in specification.[^z_i] Several of the models ascribe individual differences across true effects. In this regard, individuals should be treated as random, and a hierarchical treatment is appropriate [@Rouder:Lu:2005; @Rouder:etal:2008a; @Lee:2011]. We model individual differences as coming from either a normal or truncated normal with free mean and variance parameters. Prior settings on these parameters, $\nu$ and $g_\theta \sigma^2$, may affect inference. 
+In the following, we describe the reasons for this influence. We show the effects of reasonable ranges of prior settings on these two parameters in the Discussion.
+
+The shared mean parameter, $\nu$, induces correlation between the individuals' effects. Take, for example, the unconstrained model. We can recast the model on $\theta_i$ as $\theta_i = \nu + \epsilon_i$, where $\nu$ remains the population mean and $\epsilon_i \sim \mbox{Normal}(0, g_\theta \sigma^2)$ is the independent residual variation specific to an individual. The parameter $\nu$ is not given. Just as the shared effect in the common-effect model, $\nu$ must be estimated. It has variability in this regard and this shared variability induces a correlation between individuals' effects. We take this variation into account by computing a marginal model on $\theta_i$. The marginal models are shown in the second column of Figure\ \@ref(fig:modelfig). For the the unconstrained model and the other models that specify variability, the correlation is apparent in the figure. This correlation induces dependency between $\theta_i$s, and the resultant of this dependency is a reduction in the dimensionality of the models. This reduction makes the unconstrained model, for example, more similar to the common-effect model which is important for model comparison.
+
+[^z_i]: An exception are prior settings on $z_i$, the indicators of whether an individual is truly in the spike or the slab. We set $z_i \sim \mbox{Bernoulli}(\rho)$, where $\rho$ is the probability of being in the slab. We placed a hierarchical prior on $\rho \sim \mbox{Beta}(a, b)$, where $a = b = 1$. These prior settings represent an equal prior probability of being in the spike or the slab, and changing them may influence model comparison greatly. For this application, we decided not to explore other settings, because we do not have any theoretical implications of higher slab or spike prior probability. 
+
+## Estimation model
+
+The above five models describe possible constraints on individuals' effects. Assessing how applicable these models are to data is the core means to determining whether all individuals' true effects are positive, some individuals' true effects are null, or some individuals' true effects are even negative. In the next section, we discuss a formal inferential approach---Bayes factors--- for model comparison. Even though model comparison is the main target, estimating parameters and visualizing them remains a tool for understanding structure in data. When constructing an estimation model here, we have two goals: One is to have relatively few constraints on the parameters; the second is to respect the possibility of true null effects. To meet these goals, we place a generalized spike-and-slab model on $\theta_i$.
+
+The model has a spike at zero and a normal distribution as slab. It may be viewed as a mix between panel A and panel E in Figure\ \@ref(fig:simple-model-fig). The distribution of each individual's effect, $\theta_i$, is
+
+\begin{align*}
+\theta_i | (z_i = 1) &\sim \mbox{Normal}(\nu, g_\theta \sigma^2),\\
+\theta_i | (z_i = 0) &= 0.\\
+\end{align*}
+
+This spike-and-slab model, just as the unconstrained model in Figure\ \@ref(fig:simple-model-fig), is agnostic toward the direction of individuals' effects. It is, however, appropriate for estimating posterior spike and slab probabilities and the collection of $\bftheta$.
+
+<!-- Footnotes: -->
+[^1]: Due to data cleaning or design choices, the number of trials per person and condition may vary.
+
+[^2]: For illustration, mean and variance of the slab are set to fixed values at $\nu = 0$ and $g_\theta \sigma^2 = .07^2$ (in seconds).
+
+# Evidence for constraints
+
+```{r fig-compute, fig.height=3, fig.width=4, fig.cap="Bayes factor computations for the five models. Bayes factors between the unconstrained, common-effect, and null model can be computed using analytical solutions. Bayes factors between the spike-and-slab model, the unconstrained model, the positive-effects model, and the null model can be computed using the encompassing approach. All other Bayes factors can be computed utilizing the transitivity property of Bayes factors."}
+source("figures/bf-compute.R")
+```
+
+
+In the previous sections we develop five models, the null model, the common-effect model, the positive-effects model, the spike-and-slab model, and the unconstrained model that embed various meaningful constraints. Here, we provide a discussion on how to state evidence for these five models in the Bayesian framework. Rather than providing a formal discourse, which may be found in @Jeffreys:1961, @Kass:Raftery:1995, and @Morey:etal:2016, we provide an informal discussion that we have previously presented in @Rouder:etal:2016b and @Rouder:etal:2018.  Informally, evidence for models reflects how well they predict data.
+
+The predictions for data from each of the five models here are shown in the right column of Figure\ \@ref(fig:modelfig).  These predictions are for observed effects, $\hat{\theta}$, for each of the two exemplary participants. Note that predictions are defined on data while model specifications are defined on true effects, and this difference is reflected in the plotted quantities in the figure. For the null model, for example, *true* effects, left column, have to be exactly zero, and the *observed* effects, right column, are predicted to be near (0,0). The predictions are affected by sample noise, inasmuch as sample noise smears the form of the model.[^conv]  The remaining rows of Figure\ \@ref(fig:modelfig) show the predictions for the common-effect, positive-effects, spike-and-slab, and unconstrained models. In all cases, the predictions are smeared versions of the models.
+
+[^conv]: More technically, the predictions are the integral $\int_{\bm{\theta}} f(\bm{Y}|\bm{\theta})\pi(\bm{\theta})d\bm{\theta}$ where $f(\bm{Y}|\bm{\theta})$ is the probability density of observations conditional on parameter values and $\pi(\bm{\theta})$ is the probability density of the parameters.
+
+Once the predictions are known, model comparison is simple.  All we need to do is note where the data fall.  The red dots in the right column of Figure\ \@ref(fig:modelfig) denote hypothetical observed participants' effects.  These observed effects, 40 ms for participant 1 and 60 ms for participant 2, are both positive and about equal, and we might suspect that the common-effect model does well. To measure how well, we note the density of the prediction at the observed data point.  The densities for the models have numeric values, and we may take the ratio to describe the relative evidence from the data for one model vs. another.  For example, the best fitting model in the figure, the common-effect model, has a density that is three times the value of that of the unconstrained model.  Hence, the data are predicted three times as accurately under the common effect model than under the unconstrained model. This ratio, 3 to 1, is the *Bayes factor*, and it serves as the principled measure of evidence for one model compared to another in the Bayesian framework.  
+
+Bayes factors are conceptually straightforward---one simply computes the predictive densities at the observed data.  Nonetheless, this computation is often inconvenient in practice.  It entails the integration of a multidimensional integral which is often impossible in closed form and may be slow and inaccurate with numeric methods. For the five models here, we follow the development by @Haaf:Rouder:2017 using two methods to compute Bayes factors: An analytic approach pioneered by @Zellner:Siow:1980 and expanded for ANOVA by @Rouder:etal:2012, and the *encompassing approach* introduced by @Klugkist:etal:2005. Figure\ \@ref(fig:fig-compute) shows which method is used for which of the models.
+
+The encompassing approach is used for Bayes factor computations for the positive-effects model and the spike-and-slab model. The computations for the positive-effects model are detailed in @Haaf:Rouder:2017. New to this paper are model comparisons with the spike-and-slab model. Although the spike-and-slab model is precedented and popular, we are unaware of any prior development for comparing it as a whole to alternatives. Our approach is a straightforward application of the encompassing approach. The encompassing approach is a simple counting method within Markov chain Monte Carlo (MCMC) estimation. Take, for example, the Bayes factor between the null model and the spike-and-slab model. The target parameters for the Bayes factor computation are the collection of $z_i$, the individuals' indicators of being in the slab. Here we use $\bm{z}$ to denote the vector of $z_i$. Using these parameters, the Bayes factor between the null model and the spike-and-slab model can be expressed as
+
+\[
+B_{0 SS} = \frac{P(\bm{z} = \bm{0}|\bfY,\calM_{SS})}{P(\bm{z} = \bm{0}|\calM_{SS})},
+\]
+
+where the event $\bm{z} = \bm{0}$ indicates that every individual is in the spike. This Bayes factor is the posterior probability that all individuals are in the spike relative to the prior probability that all individuals are in the spike. The same approach can be used for comparing the spike-and-slab model to the positive-effects model, using the posterior and prior probabilities that every individual is in the slab.
+
+Using the encompassing approach in MCMC sampling, one can count the number of iterations where $\bm{z} = 0$ when $z_i$ are sampled from the posterior; likewise, one can count the number of iterations where all $\bm{z} = 0$ when the $z_i$ are sampled from the prior. Let $\bm{z}[m]$ denote a vector of $i$ samples of $z$ (one for each individual) on the $m$th iteration under the spike-and-slab model. The $m$th iteration is considered evidential of the null model if all $I$ elements of $\bm{z}[m]$ are zero, that is, on this iteration, every individual's effect $\theta_i$ is sampled from the spike. Let $n_{01}$ be the number of evidential iterations from the posterior, and let $n_{00}$ be the number of evidential iterations from the prior. Then, the Bayes factor is
+
+\[
+B_{0 SS} = \frac{n_{01}}{n_{00}}.
+\]
+
+To compute the Bayes factor of the spike-and-slab model to the remaining models, we
+use the well-known transitivity of Bayes factors [@Rouder:Morey:2012]. Figure\ \@ref(fig:fig-compute) provides an illustration for this transitivity: Say the common-effects model predicts the data three times better than the unconstrained model, and the common-effect model predicts the data 20 times better than the null model. We can use these two Bayes factors to calculate the Bayes factor for the unconstrained model over the null model as follows: $B_{u0} = \frac{B_{10}}{B_{1u}} = \frac{20}{3} = `r round(20/3, 2)`$.
+
+# Application
+
+```{r child = "chapters/application.Rmd"}
+```
+
+#Concerns
+
+The Bayesian modeling approach developed here requires judicious choices in model and prior specification. An attentive reader may have some concerns about our choices. It is reasonable to inquire about alternative models that were not included for analysis here; specifications of the normal and truncated normal; sensitivity of the results to prior settings; and computational convenience of the approach. We take these concerns in turn.
+
+## Alternative Models
+
+```{r sim, cache=T, echo=FALSE, warning=F, message=F}
+source("../../shared/simulation.R")
+
+```
+
+```{r fig-alt-spec, fig.cap="Simulation from three different true models. A. True unconstrained models. The red line shows a normal unconstrained model, the blue line shows a mixture model of true negative and true positive effects. The green line shows a mixture of true negative, null, and positive effects. The ticks at the top of the panel show true study effects chosen for simulation. B. Resulting Bayes factor distributions for the unconstrained model vs. the positive-effects model for the simulation study. The unconstrained model is preferred most of the time for all three true models.", fig.height=3.5}
+layout(matrix(1:2, ncol = 2, byrow = T))
+colScale <- brewer.pal(3, "Set1")
+
+#Graph 1
+
+effect <- seq(-.2, .35, .001)
+
+#densities for the different true models
+fN <- dnorm(effect, normPar[1],normPar[2])
+fM1 <- (mixPar1$prob[1]) * dnorm(effect, mixPar1$mu[1], mixPar1$sigma[1]) +
+  (mixPar1$prob[2]) * dnorm(effect, mixPar1$mu[2], mixPar1$sigma[2])
+fM2 <- (mixPar2$prob[2]) * dnorm(effect, mixPar1$mu[1], mixPar1$sigma[1]) + (mixPar2$prob[3]) * dnorm(effect, mixPar1$mu[2], mixPar1$sigma[2]) #plus spike
+
+par(mgp = c(1.8, .8, 0), mar = c(5.1, 2, 4.1, 1))
+plot(effect, fM1, typ='l'
+     , axes=F, xlab="Effect", ylab=""
+     , lwd=2, col = colScale[2]
+     , ylim = c(0, 6)
+     , cex.lab = .75)
+lines(effect, fN, col= colScale[1], lwd=2)
+lines(effect, fM2, col = colScale[3], lwd = 2)
+abline(v = 0, col = "gray")
+Arrows(x0 = 0, x1 = 0, y0 = 0, y1 = 5
+       , arr.type = "triangle", lwd = 2, arr.length = .3, col = colScale[3])
+axis(1, cex.axis = .75)
+rug(tNorm, side = 3, col = colScale[1],lwd=2, line = 1)
+rug(t1Mix, side = 3, col = colScale[2], lwd=2, line=1.5)
+rug(t2Mix, side = 3, col = colScale[3], lwd=2, line=2)
+legend("topright", legend = c("Normal", "Mixture 1", "Mixture 2")
+       , fill = colScale, bty = "n", cex = .8)
+# axis(side=3, at=-1.1, label="A.", col.ticks = "white", cex.axis = 1.5) 
+mtext("A.", at = -.25, line = 2)
+
+# Graph 3: Bayes Factors
+
+plot.new()           
+vps <- baseViewports()
+pushViewport(vps$figure) 
+vp1 <- plotViewport(c(2.1,1,2,1))
+
+#Data reformatting for graph 3: log10 BF
+simRes$BF <- 1/simRes$bf.pf
+#Cut off too high BFs to 10^5
+big <- 10e5
+simRes$BF <- ifelse(simRes$BF==Inf, big, simRes$BF)
+colnames(simRes)[1] <- "Simulation"
+# range(log10(ratdat$BF ))
+
+theme_set(theme_apa(base_size = 9))
+
+p <- ggplot(simRes, aes(x = Simulation, y = BF, color = Simulation)) + 
+  geom_hline(yintercept = 1, color = "darkgrey") +
+  geom_violin(trim = F) +
+  geom_jitter(shape=20, position=position_jitter(.03), alpha = .5) +
+  scale_colour_brewer(palette = "Set1") +
+  scale_y_log10(breaks= c(.01, 1, 100, 10000, 1000000)
+                , labels=c(.01, 1, 100, expression(10^4), expression(10^6))) +
+  ylab(label = expression(BF["u+"])) +
+  theme(legend.position="none")
+
+print(p,vp = vp1)
+
+# axis(side=3, at=-.1, label="C.", col.ticks = "white", cex.axis = 1.5, padj = -1.5) 
+mtext("B.", at = -.09, line = 2)
+```
+
+The five models developed here are designed to capture the following theoretical positions: 1. No person may have a true effect whatsoever; 2. Everyone has the same positive true effect; 3. individuals' effects vary, but everyone has a positive effect; 4. Some people show a true positive effect while others truly show no effect at all; and 5. Individuals' effects follow a normal, graded distribution where some people can have a true negative effect. These five, of course, are not the only choices. Here we discuss alternatives.
+
+One area of potential concern is the unconstrained model.  Here we use a graded normal, and this is our only specification accounting for the possibility that some people have truly positive effects while others have truly negative effects.  There are other model instantiations, however,  that capture this state of affairs.  One useful alternative is the mixture model shown in Figure\ \@ref(fig:simple-model-fig)E.  Here, there are three groups of individuals: those that are positive, those that are negative, and those that are null. Another possible model is one with two slabs but no spike. If we are willing to speculate, we can come up with a variety of models that instantiate positive and negative effects.
+
+Rather than implementing all of these possible alternatives, we decided to simulate how well our unconstrained normal model fared when the data followed these mixture alternatives. Figure\ \@ref(fig:fig-alt-spec)A shows the normal model and two alternatives: a two-slab mixture model (labeled "Mixture 1"), and a spike-and-two-slab mixture model (labeled "Mixture 2"). Our aim in choosing particulars for these truths was to equate the overall mean and variance.  The true individuals' effects for each study were the ticks at the top of the panel.  We simulated data from these true effects 100 times for each of the three models.  The Bayes factor between the normal unconstrained model and the positive model is computed for each of the simulated data sets. The Bayes factor distributions from the simulation are shown in the violin plots of Figure\ \@ref(fig:fig-alt-spec)B.  The unconstrained model is favored as frequently for the mixture truths as for the normal truth.
+
+The critical point to emerge from this simulation study is that the unconstrained normal model is a useful instantiation of the unconstrained position, even when misspecified.  Here is why:  The goal is to detect a few negative true effects against a background of many true positive ones.  The normal for this configuration would have a positive mean and sufficient variance so that there is noticeable negative mass (as in Figure\ \@ref(fig:fig-alt-spec)A).  The distribution of the negative part is not only small in mass, but is skewed such that small negative effects are weighted.  The normal therefore is well-suited to detect the most difficult case---the one where negative effects are few and more likely to be clustered near zero.  Moreover, with the little negative mass that we expect in these cases, there is little to distinguish a mixture model model from the unconstrained.
+
+Another area of potential concern are the point-mass specifications for the null model, the common-effect model and the spike in the spike-and-slab model. Alternative specifications are not just limited to mixture models. A recent trend is to use small equivalence regions instead of point mass [@Rogers:etal:1993; @Kruschke:Liddell:2017]. Those researchers who are convinced these are helpful models are free to use them, and the Bayes-Factor computations are no challenge [@Morey:Rouder:2011]. We do not recommend these models because they provide for less theoretical clarity than either point-mass models or distribution models. The point null, in contrast, is theoretically constrained and useful. This argument is made by @Gallistel:2009, @Jeffreys:1961, @Rouder:etal:2016b, and @Rouder:Morey:2012, just to name a few.
+
+
+## Normal Specification
+
+Another concern with the proposed approach is the reliance on normal parametric model specifications.  The advantage of the normal specification is computational convenience.  With this specification, the many dimensions of the high-dimension integrals that define the Bayes factor may be computed symbolically to high precision.  Without this specification, we suspect numeric integration would be exceedingly slow and inaccurate.  Yet, researchers may be concerned about the misspecification of the normal.  We focus here on applications with response times, and RTs are skewed rather than symmetric. Moreover, the standard deviation tends to increase with the mean [@Wagenmakers:Brown:2007; @Luce:1986; @Rouder:etal:2010d].  
+
+We think the concern about the normal specification is misplaced.  The main reason is that we focus on the analysis of ordinal relations among true means.  If we knew individual's true means, then we could answer questions about the direction of the effects without any consideration the true shapes or true variances.  The inference therefore inherently has all the robustness of ANOVA or regression, which is highly robust for skewed distributions, so long as the left tail is thin.  Indeed, RTs tend to have thin left tails that fall off no slower than an exponential [@Burbeck:Luce:1982; @VanZandt:2000 @Wenger:Gibson:2004].  
+
+@Thiele:etal:2017 addressed this concern through simulation.  They considered highly similar models and performed inference with similarly computed Bayes factors.  In simulation, they generated data from a shifted log normal with realistic skewness and with means and variances that varied across individuals and the manipulation.  As expected, they found exceptional robustness, and the reason is clear.  The main inferential logic is dependent only on true means, and the normal is a perfectly fine model for assessing this quantity even when the data are not normally distributed.
+
+## Prior Sensitivity
+
+```{r prior-sensitivity, child="figures/senstab.Rmd", cache = F, eval = T}
+```
+
+Another concern, perhaps a more pressing concern in our view, is understanding the role and effects of the priors on inference.  In general, Bayesian models require a careful choice of priors. These priors have an effect on inference as noted by many Bayesians.  A general idea in research is that, if two researchers run the same experiment and obtain the same data, they should reach the same if not similar conclusions.  Yet, the priors may be chosen differently by different researchers, and this choice may lead to differing conclusions.  To harmonize Bayesian inference with the idea of similar conclusions, many Bayesian analysts actively seek to minimize the effects by picking likelihoods, prior parametric forms, and heuristic methods of inference so that variation in prior settings have marginal effects [@Aitkin:1991;@Gelman:etal:2004;@Kruschke:2012;@Spiegelhalter:etal:2002]. In contrast, @Rouder:etal:2016b argue that the goal of analysis is to add value by searching for theoretically meaningful structure in data.  @Vanpaemel:2010 and @Vanpaemel:Lee:2012 argue that the prior is where theoretically important constraints are encoded in the model.  In our case, the prior provides the critical constraint on the relations among individuals.  We think it is best to avoid judgments that Bayes factor model comparisons depend too little or too much on priors.  They depend on it to the degree they do.
+
+Here we focus on understanding the dependence of Bayes factors on a reasonable range of prior settings and the resulting diversity of opinions. Indeed, @Haaf:Rouder:2017 took this tactic in understanding the diversity of results with all the models except for the spike-and-slab-model which was not developed at the time. Here we use a similar range of prior settings to understand the dependency on these settings.  
+
+The critical prior settings for understanding the diversity of conclusions come from the priors on $\nu$ and $\epsilon_i$ (or $g_\theta$).  Although they are not the primary target of inference, the prior settings on these parameters do affect Bayes factor results.  A full discussion of the prior structures on these parameters is provided in @Haaf:Rouder:2017, and here we review the main issues.  The critical settings are the *scales* on $\nu$ and $\epsilon_i$. These scale settings are relative to $\sigma$, the residual noise.  Our considerations for these scale settings go as follows: In tasks like this, with sub-second RTs, a standard deviation of repeated response times for a given participant and a given condition may be about 300 ms, and we can use this value to help set the scales. For example, for priming and Stroop tasks, we may expect an overall effect of 50ms, and the scale on $\nu$ might be $50ms/300ms$, or $1/6$th of the residual noise. Likewise, if the take the variability of individuals' effects depicted by $\epsilon_i$, we may expect this variation to be about 30ms, or $1/10$ of the residual noise.
+
+With these reasonable ranges of variation, we are ready to explore the effects of prior specification on Bayes factors. We explore the effects of halving and doubling these settings, which represents a reasonable range of variation. The results are shown in Table \@ref(tab:sensitivity-tab). There is a fair amount of variability in Bayes factors, and in our opinion, there should be. The range of settings define quite different models with quite different predictions. Nonetheless, there is a fair amount of consistency. For the priming data, the common-effect model is preferred for all settings, with the null-model and the spike-and-slab models as the next contenders. For the color Stroop data, the positive-effects model is preferred for all settings, and the ordering for the remaining models stays relatively constant. The only data set where the preferred model varies with prior settings is the location Stroop data: The spike-and-slab model is preferred for the chosen settings and when the scale on $\nu$ is halved. These settings indicate that small average effects are expected for all models. When the scale on $\nu$ is doubled, i.e. larger, about 100ms effects are expected, the Bayes factor between the common-effect model and the spike-and-slab model is about 1, indicating that none of the two models is preferred over the other. This Bayes factor, however, was not large from the beginning, only about 3-to-1 in favor of the spike-and-slab model. This example illustrates how useful this type of sensitivity analysis can be to understand the range of conclusions that may be drawn from the data. In this case, the evidence for the spike-and-slab model is small, and largely dependent on prior settings. For a convincing result, more evidence for a mixture of effects would be needed.
+
+## Computational Issues
+
+In previous work we developed the null, common-effect, positive-effects and unconstrained models [@Haaf:Rouder:2017; @Thiele:etal:2017]. Here we add the spike-and-slab model to capture the folk-wisdom that some do and some don't. We show it is a worthy competitor in at least one application. The former four models are computationally convenient both in estimation and in Bayes factor computations. As shown in Figure\ \@ref(fig:fig-compute), Bayes factors can be computed quickly using a combination of Rouder et al.'s [-@Rouder:etal:2012] symbolic integration as implemented in the `BayesFactor` package for `R` [@R-BayesFactor] and Klugkist and colleagues' encompassing approach [e.g. @Klugkist:Hoijtink:2007]. 
+
+Computational convenience for the spike-and-slab model is more nuanced. Estimation of this model is quick and stable. The computation of the Bayes factors for the spike-and-slab model, however, is more difficult. The difficulty here is that Bayes factor computation relies on the estimation of each individual's spike indicator, $z_i$. This collection of parameters is estimated using Markov chain Monte Carlo methods. For each iteration in the chain, we note that $z_i [m]$ is either zero or one, indicating that the $i$th persons' effect is either in the spike or in the slab, respectively. Bayes factor estimation is difficult whenever the majority of the individuals' effects are in the spike or in the slab. For example, most individuals' effects in the color Stroop task are estimated to come from the slab distribution. In this case, the critical event is when all $z_i$ are zero, and this event is rare. Hence, it is necessary to run long chains to guarantee enough rare events to estimate its rate of occurrence.
+
+The good news here is that we can assess the accuracy of the Bayes factor estimation for the spike-and-slab model by leveraging the transitivity of Bayes factors. Figure\ \@ref(fig:fig-compute) illustrates this check. We can compute the Bayes factor between the unconstrained model and the null model either with the encompassing approach using the spike-and-slab model [@Rouder:etal:2018b], or directly with symbolic integration methods [@Rouder:etal:2012]. We find comparable results from both methods with between $50000$ and $100000$ iterations in the MCMC chain, indicating good estimations of rates of rare events. Analyzing all five models takes about 45 minutes on one data set.
+
+# Discussion
+
+In this paper, we address the question whether some people show a positive effect, others show a negative effect, and again others show no effect.  The example we use here is priming, and we trichotomize the outcome into three basic relations: responses to congruent targets are faster than to incongruent ones (positive effects), responses to congruent targets are slower than to incongruent ones (negative effects), and responses to congruent targets are equally fast as to incongruent ones (no effects).  Whether the natural zero point is crossed or not has many theoretical implications.  Obvious applications of our approach include context effects (e.g., Stroop, Eriksen, Simon etc.) and strength effects (e.g., stimulus strength, mnemonic strength, etc.).    
+
+The approach we take here is Bayesian model comparison across five models: a null model, a common effect model, a positive-effects model, a spike-and-slab model, and an unconstrained normal model.  The novel element here is the usage of the spike-and-slab model.  Although spike-and-slab models are frequently used in statistics, their most common application is to categorize which covariates (people in our case) are in the spike and which are in the slab.  Our usage is novel---we ask how well this spike-and-slab structure predicts the data relative to other models.  
+
+Several psychologists have previously asked the related question of whether mixtures account for data.  In cognitive psychology, the most common application is whether responses on trials are mixtures of two bases.  @Falmagne:1968 was perhaps the earliest to formally explore this notion.  He asked whether response times for a given individual are the mixture of a stimulus-driven process and a guessing process.  Indeed, this type of query has been explored in a number of domains [e.g. @Klauer:Kellen:2010; @Yantis:etal:1991; @Province:Rouder:2012].  
+
+Our approach differs markedly from these previous queries.  Our focus is not on characterizing trial-by-trial variability but on characterizing variability across individuals.  We do not make as detailed commitments to specific cognitive architectures, but provide a general approach based on ordinal relations of less-than, same-as, and greater-than.  In this regard, our approach is more similar to latent class models used in structural equation modeling [@Skrondal:Rabe-Hesketh:2004].  In these models, vectors of outcome measures are assumed to come from the mixture of latent classes of people, and the goal is to identify the classes and categorize people into these classes [see also @Lee:Webb:2005; @Navarro:etal:2006].  One critique of this approach is that the models are so weakly identified that it is difficult to reliably recover class structure [@Bauer:Curran:2003].  We avoid this problem by restriction.  We restrict our classes into three that are well defined as the sign of the outcome measure.  In summary, while our approach is similar in some regards to previous latent-class modeling, the statistical development is novel in critical ways.
+
+We apply this approach to three exemplary data sets and find, at least for one case, some support for the claim that some individuals show an effect while others do not. We think, however, these mixtures are relatively rare in cognitive psychology where experimental paradigms tend to isolate the cognitive processes of interest. Only in cases where this isolation is not successful mixtures may occur. This was the case in our location Stroop example, where participants were able to avoid reading the target words by fixating the center of the screen. 
+
+In many cases, modeling approaches can be localized on a continuum of applicability: On the one end of the spectrum, models are widely applicable, but they only coarsely test theories. An example for this end would be ANOVA or $t$-tests. On the other end of the spectrum, models are custom tailored to measure specific processes in specific tasks. Our approach is in the sweet spot between these extremes. It is widely applicable in cognitive psychology where priming and strength tasks are prominent, and it addresses a question more complex than "is there an effect". Knowing whether all do or some some do and some don't remains timely and topical in perception, action, attention and memory.
+
+\newpage
+
+# References
+```{r create_r-references}
+r_refs(file = "r-references.bib")
+```
+
+\setlength{\parindent}{-0.5in}
+\setlength{\leftskip}{0.5in}

@@ -141,7 +141,9 @@ makeBF <- function(y, meanScale, effectScale, prep = prep.1, keep = 1001:10000)
               , est.full = mcmc.full, est.one = mcmc.one
               , prior.c = PriorCount, post.c = PostCount
               , prior.c.1 = PriorCount.1, post.c.1 = PostCount.1
-              , myTheta = myTheta))
+              , myTheta = myTheta
+              , bfs = c(bf.1f = 1/ bf.F1, bf.pf =  1/ bf.FP
+                        , bf.0f = 1 / bf.F0, bf.1pF = 1/bf.F1p)))
 }
 
 ez.mix <- function(y, sub, cond, priors, keep){

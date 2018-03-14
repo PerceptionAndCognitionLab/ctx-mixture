@@ -1,0 +1,229 @@
+
+```{r}
+new.chains <- T
+```
+
+```{r}
+keep <- 5001:50000
+
+#prep data
+datclean$condn <- 1 - datclean$cond
+sub <- as.factor(datclean$sub)
+levels(sub) <- 1:length(unique(datclean$sub))
+cond <- datclean$condn
+sub <- as.numeric(sub)
+y <- datclean$rt
+```
+
+
+```{r Priming-Data-Set-Sens, warning=FALSE, message=FALSE, cache = TRUE, eval = new.chains}
+#Prior half BF
+bfs.1.half <- all.comp(y, sub, cond, c(1, 1/12, 1/20), keep)
+
+#Prior half double
+bfs.1.half.double <- all.comp(y, sub, cond, c(1, 1/12, 1/5), keep)
+
+#Prior double half
+bfs.1.double.half <- all.comp(y, sub, cond, c(1, 1/3, 1/20), keep)
+
+#Prior double
+bfs.1.double <- all.comp(y, sub, cond, c(1, 1/3, 1/5), keep)
+
+exp1BF <- list(bfs.1.half, bfs.1.half.double, bfs.1.double.half, bfs.1.double)
+
+save(exp1BF, file = "bfRdata/exp1BF.Rdata")
+```
+
+```{r Priming-load, eval = !new.chains, cache = T}
+load(file = "bfRdata/exp1BF.Rdata")
+```
+
+```{r}
+#prep data
+sub <- as.factor(dat.stroop.p2$sub)
+levels(sub) <- 1:length(unique(dat.stroop.p2$sub))
+cond <- 1 - dat.stroop.p2$cond
+sub <- as.numeric(sub)
+y <- dat.stroop.p2$rt
+```
+
+
+```{r Marginal-Stroop-Sens, warning=FALSE, message=FALSE, cache = TRUE, eval = new.chains}
+#Prior half BF
+bfs.2.half <- all.comp(y, sub, cond, c(1, 1/12, 1/20), keep)
+
+#Prior half double
+bfs.2.half.double <- all.comp(y, sub, cond, c(1, 1/12, 1/5), keep)
+
+#Prior double half
+bfs.2.double.half <- all.comp(y, sub, cond, c(1, 1/3, 1/20), keep)
+
+#Prior double
+bfs.2.double <- all.comp(y, sub, cond, c(1, 1/3, 1/5), keep)
+
+exp2BF <- list(bfs.2.half, bfs.2.half.double, bfs.2.double.half, bfs.2.double)
+
+save(exp2BF
+     , file = "bfRdata/exp2BF.Rdata")
+```
+
+```{r Marginal-Stroop-load, eval = !new.chains, echo = F, message=F}
+load(file = "bfRdata/exp2BF.Rdata")
+```
+
+```{r}
+#prep data
+sub <- as.factor(dat.stroop.p1$sub)
+levels(sub) <- 1:length(unique(dat.stroop.p1$sub))
+cond <- 1 - dat.stroop.p1$cond
+sub <- as.numeric(sub)
+y <- dat.stroop.p1$rt
+```
+
+
+```{r Successful-Stroop-Sens, warning=FALSE, message=FALSE, cache = TRUE, eval = new.chains}
+#Prior half BF
+bfs.3.half <- all.comp(y, sub, cond, c(1, 1/12, 1/20), keep)
+
+#Prior half double
+bfs.3.half.double <- all.comp(y, sub, cond, c(1, 1/12, 1/5), keep)
+
+#Prior double half
+bfs.3.double.half <- all.comp(y, sub, cond, c(1, 1/3, 1/20), keep)
+
+#Prior double
+bfs.3.double <- all.comp(y, sub, cond, c(1, 1/3, 1/5), keep)
+
+exp3BF <- list(bfs.3.half, bfs.3.half.double, bfs.3.double.half, bfs.3.double)
+
+save(exp3BF
+     , file = "bfRdata/exp3BF.Rdata")
+```
+
+```{r Stroop2-load, eval = !new.chains, echo = F, message=F}
+load(file = "bfRdata/exp3BF.Rdata")
+```
+
+```{r sensitivity-tab, echo = FALSE, warning=FALSE, message=FALSE, cache = F, results = "asis"}
+#Sorting all bf the right way
+
+#Exp 1
+scales.nu <- c("\\bf{1/6}", "1/12", "1/12", "1/3", "1/3")
+scales.epsilon <- c("\\bf{1/10}", "1/20", "1/5", "1/20", "1/5")
+BFs.1 <- data.frame(
+  "Scale on $\\nu$" = scales.nu
+  , "Scale on $\\epsilon$" = scales.epsilon
+  , Null = c(subprim.bfs$bf0f/subprim.bfs$bf1pf
+             , exp1BF[[1]]$bf0f/ exp1BF[[1]]$bf1pf
+             , exp1BF[[2]]$bf0f/ exp1BF[[2]]$bf1pf
+             , exp1BF[[3]]$bf0f/ exp1BF[[3]]$bf1pf
+             , exp1BF[[4]]$bf0f/ exp1BF[[4]]$bf1pf)
+  , "Common effect" = rep("*", 5)
+  , "Positive effect" = c(round(subprim.bfs$bfpf/ subprim.bfs$bf1pf, 2)
+                          , round(exp1BF[[1]]$bfpf/ exp1BF[[1]]$bf1pf, 2)
+                          , round(exp1BF[[2]]$bfpf/ exp1BF[[2]]$bf1pf, 2)
+                          , paste0(round(
+                            exp1BF[[3]]$bfpf/ exp1BF[[3]]$bf1pf * 10^8, 2), "e $-8$")
+                          , paste(round(
+                            exp1BF[[4]]$bfpf/ exp1BF[[4]]$bf1pf * 10^8, 2), "e $-8$"))
+  , "Spike-and-slab" = c(round(subprim.bfs$bfpss/subprim.bfs$bffs/subprim.bfs$bf1pf, 2)
+                         , round(exp1BF[[1]]$bfpss / exp1BF[[1]]$bffs / exp1BF[[1]]$bf1pf, 2)
+                         , round(exp1BF[[2]]$bfpss / exp1BF[[2]]$bffs / exp1BF[[2]]$bf1pf, 2)
+                         , paste0(round(
+                           exp1BF[[3]]$bfpss / exp1BF[[3]]$bffs / exp1BF[[3]]$bf1pf, 3))
+                         , paste0(round(
+                           exp1BF[[4]]$bfpss / exp1BF[[4]]$bffs / exp1BF[[4]]$bf1pf * 10^4
+                           , 2), "e $-4$"))
+  , Unconstrained = c(round(1/subprim.bfs$bf1pf, 2)
+                      , round(1/exp1BF[[1]]$bf1pf, 2)
+                      , round(1/exp1BF[[2]]$bf1pf, 2)
+                      , paste0(round(1/exp1BF[[3]]$bf1pf * 10^5, 2), "e $-5$")
+                      , paste0(round(1/exp1BF[[4]]$bf1pf * 10^5, 2), "e $-5$"))
+)
+
+#Exp 2
+BFs.2 <- data.frame(
+  "Scale on $\\nu$" = scales.nu
+  , "Scale on $\\epsilon$" = scales.epsilon
+  , Null = c(paste0(round(
+    stroop2.bfs$bf0f/(stroop2.bfs$bfpss/stroop2.bfs$bffs) * 10^4, 2), "e $-4$")
+             , paste0(round(
+               exp2BF[[1]]$bf0f/ (exp2BF[[1]]$bfpss / exp2BF[[1]]$bffs) * 10^4, 2), "e $-4$")
+             , paste0(round(
+               exp2BF[[2]]$bf0f/ (exp2BF[[2]]$bfpss / exp2BF[[2]]$bffs) * 10^4, 2), "e $-4$")
+             , paste0(round(
+               exp2BF[[3]]$bf0f/ (exp2BF[[3]]$bfpss / exp2BF[[3]]$bffs) * 10^4, 2), "e $-5$")
+             , paste0(round(
+               exp2BF[[4]]$bf0f/ (exp2BF[[4]]$bfpss / exp2BF[[4]]$bffs) * 10^3, 2), "e $-3$"))
+  , "Common effect" = c(stroop2.bfs$bf1pf/(stroop2.bfs$bfpss/stroop2.bfs$bffs)
+                      , exp2BF[[1]]$bf1pf/ (exp2BF[[1]]$bfpss / exp2BF[[1]]$bffs)
+                      , exp2BF[[2]]$bf1pf/ (exp2BF[[2]]$bfpss / exp2BF[[2]]$bffs)
+                      , exp2BF[[3]]$bf1pf/ (exp2BF[[3]]$bfpss / exp2BF[[3]]$bffs)
+                      , exp2BF[[4]]$bf1pf/ (exp2BF[[4]]$bfpss / exp2BF[[4]]$bffs)
+    
+  )
+  , "Positive effect" = c(round(c(stroop2.bfs$bfpf/(stroop2.bfs$bfpss/stroop2.bfs$bffs)
+                          , exp2BF[[1]]$bfpf/ (exp2BF[[1]]$bfpss / exp2BF[[1]]$bffs)
+                          , exp2BF[[2]]$bfpf/ (exp2BF[[2]]$bfpss / exp2BF[[2]]$bffs)
+                          , exp2BF[[3]]$bfpf/ (exp2BF[[3]]$bfpss / exp2BF[[3]]$bffs)), 2)
+                          , paste0(round(
+                            exp2BF[[4]]$bfpf/ (exp2BF[[4]]$bfpss / exp2BF[[4]]$bffs) * 10^5
+                            , 2), "e $-5$"))
+  , "Spike-and-slab" = rep("*", 5)
+  , Unconstrained = c(round(c(1/(stroop2.bfs$bfpss/stroop2.bfs$bffs)
+                      , 1/(exp2BF[[1]]$bfpss / exp2BF[[1]]$bffs)
+                      , 1/(exp2BF[[2]]$bfpss / exp2BF[[2]]$bffs)), 2)
+                      , paste0(round(
+                        1/(exp2BF[[3]]$bfpss / exp2BF[[3]]$bffs) * 10^3, 2), "e $-3$")
+                      , round(1/(exp2BF[[4]]$bfpss / exp2BF[[4]]$bffs), 2))
+)
+
+#Exp 3
+BFs.3 <- data.frame(
+  "Scale on $\\nu$" = scales.nu
+  , "Scale on $\\epsilon$" = scales.epsilon
+  , Null = c(paste0(round(stroop1.bfs$bf0f/stroop1.bfs$bfpf * 10^74, 2), "e $-74$")
+             , paste0(round(c(exp3BF[[1]]$bf0f/ exp3BF[[1]]$bfpf * 10^74
+             , exp3BF[[2]]$bf0f/ exp3BF[[2]]$bfpf * 10^74), 2), "e $-74$")
+             , paste0(round(exp3BF[[3]]$bf0f/ exp3BF[[3]]$bfpf * 10^75, 2), "e $-75$")
+             , paste0(round(exp3BF[[4]]$bf0f/ exp3BF[[4]]$bfpf * 10^74, 2), "e $-74$"))
+  , "Common effect" = paste0(round(c(stroop1.bfs$bf1pf/ stroop1.bfs$bfpf * 10^6
+                        , exp3BF[[1]]$bf1pf/ exp3BF[[1]]$bfpf * 10^7
+                        , exp3BF[[2]]$bf1pf/ exp3BF[[2]]$bfpf * 10^6
+                        , exp3BF[[3]]$bf1pf/ exp3BF[[3]]$bfpf * 10^7
+                        , exp3BF[[4]]$bf1pf/ exp3BF[[4]]$bfpf * 10^6), 2)
+                        , c(rep(c("e $-6$", "e $-7$"), 2), "e $-6$"))
+  , "Positive effect" = rep("*", 5)
+  , "Spike-and-slab" = c(stroop1.bfs$bfpss/stroop1.bfs$bffs/stroop1.bfs$bfpf
+                         , exp3BF[[1]]$bfpss / exp3BF[[1]]$bffs / exp3BF[[1]]$bfpf
+                         , exp3BF[[2]]$bfpss / exp3BF[[2]]$bffs / exp3BF[[2]]$bfpf
+                         , exp3BF[[3]]$bfpss / exp3BF[[3]]$bffs / exp3BF[[3]]$bfpf
+                         , exp3BF[[4]]$bfpss / exp3BF[[4]]$bffs / exp3BF[[4]]$bfpf)
+  , Unconstrained = c(1/stroop1.bfs$bfpf
+                      , 1/exp3BF[[1]]$bfpf
+                      , 1/exp3BF[[2]]$bfpf
+                      , 1/exp3BF[[3]]$bfpf
+                      , 1/exp3BF[[4]]$bfpf)
+)
+
+clnames <- c("Scale on $\\nu$", "Scale on $\\epsilon$"
+                   , "$\\calM_{0}$", "$\\calM_{1}$"
+                   , "$\\calM_{+}$", "$\\calM_{SS}$", "$\\calM_{u}$")
+colnames(BFs.1) <- clnames
+colnames(BFs.2) <- clnames
+colnames(BFs.3) <- clnames
+
+
+tab <- list(
+  "\\bf{Priming}" = BFs.1
+  , "\\bf{Location Stroop}" = BFs.2
+  , "\\bf{Color Stroop}" = BFs.3
+)
+
+apa_table(tab
+          , align = c("l", "l", "r", "r", "r", "r", "r")
+          , note = "Sensitivity analysis of Bayes factor computation for all three data sets. Different settings of the scales on $\\nu$ and $\\epsilon$ represent a reasonable range of priors around the setting used for the main analysis (bold). The askerisks mark the winning model for each data set for the original analysis, and Bayes factors are computed for comparison to this model."
+          , caption = "Sensitivity of Bayes factors to prior settings"
+          , escape = F
+)
+```
